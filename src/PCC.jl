@@ -97,6 +97,8 @@ module PCC
   return ifft!(y[:])
  end
 
+
+
  # MV version
  function pcc1d_fft_blk_v2_prep(k)
   n,p = size(k); @assert n%p == 0; q = n ÷ p
@@ -119,8 +121,6 @@ module PCC
   end
   return ifft!(y[:])
  end
-
- 
 
  function pcc2d_naive(x,k)
   n1,n2 = size(x); n1_,n2_,p1,p2 = size(k)

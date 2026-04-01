@@ -12,7 +12,8 @@ pcc1d_functions =
          [ (apply=pcc1d_fft, prep=pcc1d_fft_prep),
            (apply=pcc1d_fft_blk_v0, prep=pcc1d_fft_blk_v0_prep),
            (apply=pcc1d_fft_blk_v1, prep=pcc1d_fft_blk_v1_prep),
-           (apply=pcc1d_fft_blk_v2, prep=pcc1d_fft_blk_v2_prep) ]
+           (apply=pcc1d_fft_blk_v2, prep=pcc1d_fft_blk_v2_prep)
+           ]
 
 pcc2d_functions = 
          [ (apply=pcc2d_fft, prep=pcc2d_fft_prep),
@@ -34,6 +35,8 @@ function test_pcc(naive=pcc1d_naive,other=pcc1d_functions,n=12,p=3)
     end
   end
 end
+
+# TODO: add test for consistency with circular convolution (p=1)
 
 function test_pcc_all()
  # 1D tests
