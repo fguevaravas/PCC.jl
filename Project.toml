@@ -1,0 +1,11 @@
+name = "PKC"
+uuid = "240c550d-7de0-4bf7-a673-27fb0c086b82"
+version = "0.1.0"
+authors = ["Fernando González del Cueto <fcueto@gmail.com>", "Fernando Guevara Vasquez <fguevara@math.utah.edu>"]
+
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
