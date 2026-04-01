@@ -13,6 +13,10 @@ function bench_pcc1d_pfixed()
     k̂ = pcc1d_fft_blk_v1_prep(k)
     t = @benchmark pcc1d_fft_blk_v1($(randn(n)),$k̂) samples=1000
     push!(results,(p,q,"blk_v1",t))
+
+    k̂ = pcc1d_fft_blk_v2_prep(k)
+    t = @benchmark pcc1d_fft_blk_v2($(randn(n)),$k̂) samples=1000
+    push!(results,(p,q,"blk_v2",t))
   end
   return results
 end
@@ -31,6 +35,10 @@ function bench_pcc1d_nfixed()
     k̂ = pcc1d_fft_blk_v1_prep(k)
     t = @benchmark pcc1d_fft_blk_v1($(randn(n)),$k̂) samples=1000
     push!(results,(p,q,"blk_v1",t))
+
+    k̂ = pcc1d_fft_blk_v2_prep(k)
+    t = @benchmark pcc1d_fft_blk_v2($(randn(n)),$k̂) samples=1000
+    push!(results,(p,q,"blk_v2",t))
   end
   return results
 end
@@ -49,6 +57,10 @@ function bench_pcc2d_pfixed()
     k̂ = pcc2d_fft_blk_v1_prep(k)
     t = @benchmark pcc2d_fft_blk_v1($(randn(n...)),$k̂) samples=1000
     push!(results,(p,qq,"blk_v1",t))
+
+    k̂ = pcc2d_fft_blk_v2_prep(k)
+    t = @benchmark pcc2d_fft_blk_v2($(randn(n...)),$k̂) samples=1000
+    push!(results,(p,qq,"blk_v2",t))
   end
   return results
 end
@@ -68,26 +80,37 @@ function bench_pcc2d_nfixed()
     k̂ = pcc2d_fft_blk_v1_prep(k)
     t = @benchmark pcc2d_fft_blk_v1($(randn(n...)),$k̂) samples=1000
     push!(results,(pp,q,"blk_v1",t))
+
+    k̂ = pcc2d_fft_blk_v2_prep(k)
+    t = @benchmark pcc2d_fft_blk_v2($(randn(n...)),$k̂) samples=1000
+    push!(results,(pp,q,"blk_v2",t))
   end
   return results
 end
 
+algos = [ "fft","blk_v1","blk_v2"]
+
 # BenchmarkTools stores results in nanoseconds
 function plot_pcc1d_pfixed(res)
-  alg1 = res[res.algo .== "fft",:]
-  alg2 = res[res.algo .== "blk_v1",:]
-
   figure(1); clf()
-  loglog(alg1[:,:p].*alg1[:,:q],[ mean(alg1[:,:bench][j].times) for j ∈ 1:size(alg1,1) ]/1e3,label="fft")
-  loglog(alg2[:,:p].*alg2[:,:q],[ mean(alg2[:,:bench][j].times) for j ∈ 1:size(alg2,1) ]/1e3,label="improved")
+  for algo ∈ algos
+    z = res[res.algo .== algo,:]
+    loglog(z[:,:p].*z[:,:q],
+           [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]/1e3,
+           label=algo)
+  end
   legend()
   xlabel("n")
   ylabel("time (μs)")
   savefig("pfixed_time_1d.png")
 
   figure(2); clf()
-  loglog(alg1[:,:p].*alg1[:,:q],[ alg1[:,:bench][j].memory for j ∈ 1:size(alg1,1) ],label="fft")
-  loglog(alg2[:,:p].*alg2[:,:q],[ alg2[:,:bench][j].memory for j ∈ 1:size(alg2,1) ],label="improved")
+  for algo ∈ algos 
+    z = res[res.algo .== algo,:]
+    loglog(z[:,:p].*z[:,:q],
+           [ z[:,:bench][j].memory for j ∈ 1:size(z,1) ]/1e3,
+           label=algo)
+  end
   legend()
   xlabel("n")
   ylabel("memory (bytes)")
@@ -99,16 +122,25 @@ function plot_pcc1d_nfixed(res)
   alg2 = res[res.algo .== "blk_v1",:]
 
   figure(1); clf()
-  loglog(alg1[:,:p],[ mean(alg1[:,:bench][j].times) for j ∈ 1:size(alg1,1) ]/1e6,label="fft")
-  loglog(alg2[:,:p],[ mean(alg2[:,:bench][j].times) for j ∈ 1:size(alg2,1) ]/1e6,label="improved")
+  for algo ∈ algos 
+    z = res[res.algo .== algo,:]
+    loglog(z[:,:p],
+           [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]/1e3,
+           label=algo)
+  end
+
   legend()
   xlabel("p")
   ylabel("time (ms)")
   savefig("nfixed_time_1d.png")
 
   figure(2); clf()
-  loglog(alg1[:,:p],[ alg1[:,:bench][j].memory for j ∈ 1:size(alg1,1) ],label="fft")
-  loglog(alg2[:,:p],[ alg2[:,:bench][j].memory for j ∈ 1:size(alg2,1) ],label="improved")
+  for algo ∈ algos 
+    z = res[res.algo .== algo,:]
+    loglog(z[:,:p],
+           [ z[:,:bench][j].memory for j ∈ 1:size(z,1) ]/1e3,
+           label=algo)
+  end
   legend()
   xlabel("p")
   ylabel("memory (bytes)")
@@ -120,24 +152,24 @@ function plot_pcc2d_pfixed(res)
   alg2 = res[res.algo .== "blk_v1",:]
 
   figure(1); clf()
-  loglog([ alg1[j,:p][1]*alg1[j,:q][1] for j ∈ 1:size(alg1,1) ] ,
-         [ mean(alg1[:,:bench][j].times) for j ∈ 1:size(alg1,1) ]/1e6,
-         label="fft")
-  loglog([ alg2[j,:p][1]*alg2[j,:q][1] for j ∈ 1:size(alg2,1) ] ,
-         [ mean(alg2[:,:bench][j].times) for j ∈ 1:size(alg2,1) ]/1e6,
-         label="improved")
+  for algo ∈ algos 
+    z = res[res.algo .== algo,:]
+    loglog([ z[j,:p][1]*z[j,:q][1] for j ∈ 1:size(z,1) ] ,
+           [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]/1e6,
+           label=algo)
+  end
   legend()
   xlabel("n")
   ylabel("time (ms)")
   savefig("pfixed_time_2d.png")
 
   figure(2); clf()
-  loglog([ alg1[j,:p][1]*alg1[j,:q][1] for j ∈ 1:size(alg1,1) ] ,
-         [ alg1[:,:bench][j].memory for j ∈ 1:size(alg1,1) ],
-         label="fft")
-  loglog([ alg2[j,:p][1]*alg2[j,:q][1] for j ∈ 1:size(alg2,1) ] ,
-         [ alg2[:,:bench][j].memory for j ∈ 1:size(alg2,1) ],
-         label="improved")
+  for algo ∈ algos 
+    z = res[res.algo .== algo,:]
+    loglog([ z[j,:p][1]*z[j,:q][1] for j ∈ 1:size(z,1) ] ,
+           [ z[:,:bench][j].memory for j ∈ 1:size(z,1) ],
+           label=algo)
+  end
   legend()
   xlabel("n")
   ylabel("memory (bytes)")
@@ -149,24 +181,24 @@ function plot_pcc2d_nfixed(res)
   alg2 = res[res.algo .== "blk_v1",:]
 
   figure(1); clf()
-  loglog([ alg1[j,:p][1] for j ∈ 1:size(alg1,1) ] ,
-         [ mean(alg1[:,:bench][j].times) for j ∈ 1:size(alg1,1) ]/1e6,
-         label="fft")
-  loglog([ alg2[j,:p][1] for j ∈ 1:size(alg2,1) ] ,
-         [ mean(alg2[:,:bench][j].times) for j ∈ 1:size(alg2,1) ]/1e6,
-         label="improved")
+  for algo ∈ algos 
+    z = res[res.algo .== algo,:]
+    loglog([ z[j,:p][1] for j ∈ 1:size(z,1) ] ,
+           [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]/1e6,
+           label=algo)
+  end
   legend()
   xlabel("n")
   ylabel("time (ms)")
   savefig("nfixed_time_2d.png")
 
   figure(2); clf()
-  loglog([ alg1[j,:p][1] for j ∈ 1:size(alg1,1) ] ,
-         [ alg1[:,:bench][j].memory for j ∈ 1:size(alg1,1) ],
-         label="fft")
-  loglog([ alg2[j,:p][1] for j ∈ 1:size(alg2,1) ] ,
-         [ alg2[:,:bench][j].memory for j ∈ 1:size(alg2,1) ],
-         label="improved")
+  for algo ∈ algos 
+    z = res[res.algo .== algo,:]
+    loglog([ z[j,:p][1] for j ∈ 1:size(z,1) ] ,
+           [ z[:,:bench][j].memory for j ∈ 1:size(z,1) ],
+           label=algo)
+  end
   legend()
   xlabel("n")
   ylabel("memory (bytes)")

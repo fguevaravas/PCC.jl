@@ -190,7 +190,9 @@ module PCC
   y = zeros(T,q1,p1,q2,p2)
   x̂ = fft(reshape(x,p1,q1,p2,q2),(2,4))
   k̂ = reshape(k̂,q1,p1,q2,p2,p1,p2)
-  for j1=1:p1, j2=1:p2, i1=1:p1, i2=1:p2, l1=1:q1, l2=1:q2
+  # the ordering of the indices in the nested for loop is s.t.
+  # we traverse k̂ sequentially in memory
+  for  j2=1:p2, j1=1:p1, i2=1:p2, l2=1:q2, i1=1:p1, l1=1:q1 
    @inbounds y[l1,i1,l2,i2] += k̂[l1,i1,l2,i2,j1,j2] * x̂[j1,l1,j2,l2]
   end
   return ifft!(reshape(y,n1,n2))
