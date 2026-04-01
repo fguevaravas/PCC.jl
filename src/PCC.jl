@@ -1,6 +1,5 @@
 module PCC
  using LinearAlgebra, FFTW
- using BenchmarkTools
 
  export cc1d, pcc1d_naive_prep, pcc1d_naive, 
   pcc1d_fft_prep, pcc1d_fft, 
@@ -122,22 +121,6 @@ module PCC
  end
 
  
- function bench_pcc1d()
-  results = Dict()
-  for p ∈ [4,8,16], q ∈ [2,4,8,16,32,64]
-   n = p*q
-   k = randn(n,p)
-   k̂ = pcc1d_fft_prep(k)
-   x = randn(n)
-   t1 = @benchmark pcc1d_fft($x,$k̂) 
-   results[(p=p,q=q,alg="fft")] = t1
-
-   k̂ = pcc1d_fft_blk_v2_prep(k)
-   t2 = @benchmark pcc1d_fft_blk_v2($x,$k̂)
-   results[(p=p,q=q,alg="blk_v2")] = t2
-  end
-  return results
- end
 
  function pcc2d_naive(x,k)
   n1,n2 = size(x); n1_,n2_,p1,p2 = size(k)

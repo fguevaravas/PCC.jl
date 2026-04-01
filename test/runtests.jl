@@ -49,6 +49,4 @@ function test_pcc_all()
  test_pcc(pcc2d_naive,pcc2d_functions,(32,27),(32,27)) # p =n
 end
 
-@testset "PKC tests" begin
- test_pcc_all()
-end
+test_pcc_all()
