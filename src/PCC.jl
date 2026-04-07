@@ -220,7 +220,7 @@ module PCC
   y = zeros(T,p1*p2,q1,q2)
   x̂ = fft(reshape(x,p1,q1,p2,q2),(2,4))
   x̂ = permutedims(x̂,(1,3,2,4))
-  for l1=1:q1, l2=1:q2
+  for l2=1:q2, l1=1:q1
    D = reshape(k̂[:,:,:,:,l1,l2],p1*p2,p1*p2)
    y[:,l1,l2] += D * vec(x̂[:,:,l1,l2])
   end

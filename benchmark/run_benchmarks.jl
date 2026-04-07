@@ -88,121 +88,136 @@ function bench_pcc2d_nfixed()
   return results
 end
 
-algos = [ "fft","blk_v1","blk_v2"]
+#algos = [ "fft","blk_v1","blk_v2"]
+algos = [ "fft","blk_v1"]
+algo_legend = Dict( "fft" => "fft", "blk_v1"=>"fft improved", "blk_v2"=>"fft improved mv")
 
-# BenchmarkTools stores results in nanoseconds
+# extract time (in nanoseconds) and memory usage (in bytes)
+times(z) = [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]
+memory(z) = [ z[:,:bench][j].memory for j ∈ 1:size(z,1) ]
+# extract meaningful dimensions from dataframe
+ns(z) = [ z[j,:p][1]*z[j,:q][1] for j ∈ 1:size(z,1) ]
+periods(z) = [ z[j,:p][1] for j ∈ 1:size(z,1) ]
+
+# extract speedup for two algorithms alg1/alg2
+function speedups(z,alg1,alg2)
+ z1 = z[z.algo .== alg1,:]
+ z2 = z[z.algo .== alg2,:]
+ return times(z1)./times(z2)
+end
+
+# to put any savefig options
+mysavefig(x) = savefig("$x.pdf", bbox_inches="tight")
+figsize = (4,3)
+
 function plot_pcc1d_pfixed(res)
-  figure(1); clf()
+  figure(1,figsize=figsize); clf()
   for algo ∈ algos
     z = res[res.algo .== algo,:]
-    loglog(z[:,:p].*z[:,:q],
-           [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]/1e3,
-           label=algo)
+    loglog(z[:,:p].*z[:,:q], times(z)/1e3, label=algo_legend[algo])
   end
   legend()
   xlabel("n")
   ylabel("time (μs)")
-  savefig("pfixed_time_1d.png")
+  mysavefig("pfixed_time_1d")
 
-  figure(2); clf()
+  figure(2,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog(z[:,:p].*z[:,:q],
-           [ z[:,:bench][j].memory for j ∈ 1:size(z,1) ]/1e3,
-           label=algo)
+    loglog(z[:,:p].*z[:,:q], memory(z), label=algo_legend[algo])
   end
   legend()
   xlabel("n")
   ylabel("memory (bytes)")
-  savefig("pfixed_mem_1d.png")
+  mysavefig("pfixed_mem_1d")
 end
 
 function plot_pcc1d_nfixed(res)
-  alg1 = res[res.algo .== "fft",:]
-  alg2 = res[res.algo .== "blk_v1",:]
-
-  figure(1); clf()
+  figure(1,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog(z[:,:p],
-           [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]/1e3,
-           label=algo)
+    loglog(z[:,:p], times(z)/1e3, label=algo_legend[algo])
   end
 
   legend()
   xlabel("p")
   ylabel("time (ms)")
-  savefig("nfixed_time_1d.png")
+  mysavefig("nfixed_time_1d")
 
-  figure(2); clf()
+  figure(2,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog(z[:,:p],
-           [ z[:,:bench][j].memory for j ∈ 1:size(z,1) ]/1e3,
-           label=algo)
+    loglog(z[:,:p], memory(z)/1e3, label=algo_legend[algo])
   end
   legend()
   xlabel("p")
   ylabel("memory (bytes)")
-  savefig("nfixed_mem_1d.png")
+  mysavefig("nfixed_mem_1d")
 end
 
-function plot_pcc2d_pfixed(res)
-  alg1 = res[res.algo .== "fft",:]
-  alg2 = res[res.algo .== "blk_v1",:]
 
-  figure(1); clf()
+function plot_pcc_speedups(res1p,res1n,res2p,res2n)
+  figure(1,figsize=figsize); clf()
+  z = res1p[res1p.algo .== "fft",:]
+  semilogx(z[:,:p].*z[:,:q],speedups(res1p,"fft","blk_v1"),label="1D")
+  z = res2p[res2p.algo .== "fft",:]
+  semilogx(ns(z),speedups(res2p,"fft","blk_v1"),label="2D")
+  xlabel("n"); ylim(bottom=0)
+  legend()
+  mysavefig("pfixed_speedup")
+
+  figure(2,figsize=figsize); clf()
+  z = res1n[res1n.algo .== "fft",:]
+  semilogx(z[:,:p],speedups(res1n,"fft","blk_v1"),label="1D")
+  z = res2n[res2n.algo .== "fft",:]
+  semilogx(periods(z),speedups(res2n,"fft","blk_v1"),label="2D")
+  xlabel("p"); ylim(bottom=0)
+  legend()
+  mysavefig("nfixed_speedup")
+
+end
+function plot_pcc2d_pfixed(res)
+  figure(1,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog([ z[j,:p][1]*z[j,:q][1] for j ∈ 1:size(z,1) ] ,
-           [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]/1e6,
-           label=algo)
+    loglog(ns(z), times(z)/1e6, label=algo_legend[algo])
   end
   legend()
   xlabel("n")
   ylabel("time (ms)")
-  savefig("pfixed_time_2d.png")
+  mysavefig("pfixed_time_2d")
 
-  figure(2); clf()
+  figure(2,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog([ z[j,:p][1]*z[j,:q][1] for j ∈ 1:size(z,1) ] ,
-           [ z[:,:bench][j].memory for j ∈ 1:size(z,1) ],
-           label=algo)
+    loglog(ns(z), memory(z), label=algo_legend[algo])
   end
   legend()
   xlabel("n")
   ylabel("memory (bytes)")
-  savefig("pfixed_mem_2d.png")
+  mysavefig("pfixed_mem_2d")
 end
 
 function plot_pcc2d_nfixed(res)
-  alg1 = res[res.algo .== "fft",:]
-  alg2 = res[res.algo .== "blk_v1",:]
-
-  figure(1); clf()
+  figure(1,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog([ z[j,:p][1] for j ∈ 1:size(z,1) ] ,
-           [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]/1e6,
-           label=algo)
+    loglog(periods(z), times(z)/1e6, label=algo_legend[algo])
   end
   legend()
   xlabel("n")
   ylabel("time (ms)")
-  savefig("nfixed_time_2d.png")
+  mysavefig("nfixed_time_2d")
 
-  figure(2); clf()
+  figure(2,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog([ z[j,:p][1] for j ∈ 1:size(z,1) ] ,
-           [ z[:,:bench][j].memory for j ∈ 1:size(z,1) ],
-           label=algo)
+    loglog(periods(z),memory(z), label=algo_legend[algo])
   end
   legend()
   xlabel("n")
   ylabel("memory (bytes)")
-  savefig("nfixed_mem_2d.png")
+  mysavefig("nfixed_mem_2d")
 end
 
 function bench_all()
@@ -218,4 +233,5 @@ function plot_all(res1p,res1n,res2p,res2n)
  plot_pcc1d_nfixed(res1n)
  plot_pcc2d_pfixed(res2p)
  plot_pcc2d_nfixed(res2n)
+ plot_pcc_speedups(res1p,res1n,res2p,res2n)
 end
