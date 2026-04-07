@@ -20,7 +20,7 @@ colors = ["blue","red","orange"]
 mysavefig(x) = savefig("$x.pdf", bbox_inches="tight")
 
 # the kernel
-figure(1); clf();
+figure(1,figsize=(3,9/4)); clf();
 for i=1:p
   subplot(p,1,i)
   step(0:n,[k[:,i];k[end,i]],color=colors[i],where="post")
@@ -36,7 +36,7 @@ mysavefig("kernel1d")
 # the signal
 u = [0, 0, 0, -1, -0.5, -1, 1, 1, 0, 0, 0, 0 ]
 for (ix,x) ∈ enumerate([ u , circshift(u,-1) ])
-  figure(2); clf()
+  figure(2,figsize=(3,1.5)); clf()
   step(0:n,[x;x[end]],color="black",where="post")
   xticks(0:n,[])
   grid(true)
@@ -47,7 +47,7 @@ for (ix,x) ∈ enumerate([ u , circshift(u,-1) ])
   
   # the transformed signal
   y = pcc1d_naive(x,k)
-  figure(3); clf()
+  figure(3,figsize=(3,1.5)); clf()
   step(0:n,[y;y[end]],color="black",where="post")
   xticks(0:n,[])
   grid(true)
@@ -57,7 +57,7 @@ for (ix,x) ∈ enumerate([ u , circshift(u,-1) ])
   mysavefig("y1d_$ix")
   
   # the signal components
-  figure(4); clf()
+  figure(4,figsize=(3,9)); clf()
   for j ∈ 1:n
     yj = [x[j]* k[mod1(i-j+1,n),mod1(j,p)] for i=1:n]
     subplot(n,1,j)
