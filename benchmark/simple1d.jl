@@ -1,18 +1,18 @@
 using PCC, LinearAlgebra, PyPlot
 # a simple 1D example
 p = 3; n=12
-k = [ 1 2    2 
-      0 1    0
-      0 0    0 
-      0 0    0 
-      0 0    0
-      0 0    0
-      0 0    0 
-      0 0    0 
-      0 0    0 
-      0 0    0 
-      0 0    0
-      0 0    1]
+k = [ 1 2 2 
+      0 1 0
+      0 0 0 
+      0 0 0 
+      0 0 0
+      0 0 0
+      0 0 0 
+      0 0 0 
+      0 0 0 
+      0 0 0 
+      0 0 0
+      0 0 1]
 
 k = k * diagm(vec(1 ./sum(k,dims=1)))
 colors = ["blue","red","orange"]
@@ -33,42 +33,50 @@ for i=1:p
 end
 mysavefig("kernel1d")
 
-# the signal
-u = [0, 0, 0, -1, -0.5, -1, 1, 1, 0, 0, 0, 0 ]
-for (ix,x) ∈ enumerate([ u , circshift(u,-1) ])
-  figure(2,figsize=(3,1.5)); clf()
+# instead of plotting the kernel plot different signals
+# the signals
+u = [0, 0, 0, -1, -0.5, -1, 1, 1, 0, 0, 0, 0 ];
+signals = [ [Float64(j==(p+i)) for j=1:n] for i=1:p ]
+push!(signals,u)
+push!(signals,circshift(u,1))
+push!(signals,circshift(u,2))
+for (ix,x) ∈ enumerate(signals)
+  figure(2,figsize=(2,1)); clf()
+  println(x)
   step(0:n,[x;x[end]],color="black",where="post")
   xticks(0:n,[])
   grid(true)
   xlim(0,n); ylim(-1.05,1.05)
-  yticks([-1,0,1])
-  box("off")
+  yticks([-1,0,1],[])
+  tick_params(axis="both", which="both", length=0)
+  box(false)
   mysavefig("x1d_$ix")
   
   # the transformed signal
   y = pcc1d_naive(x,k)
-  figure(3,figsize=(3,1.5)); clf()
+  figure(3,figsize=(2,1)); clf()
   step(0:n,[y;y[end]],color="black",where="post")
   xticks(0:n,[])
   grid(true)
   xlim(0,n); ylim(-1.05,1.05)
-  yticks([-1,0,1])
-  box("off")
+  yticks([-1,0,1],[])
+  tick_params(axis="both", which="both", length=0)
+  box(false)
   mysavefig("y1d_$ix")
   
   # the signal components
-  figure(4,figsize=(3,9)); clf()
-  for j ∈ 1:n
-    yj = [x[j]* k[mod1(i-j+1,n),mod1(j,p)] for i=1:n]
-    subplot(n,1,j)
-    step(0:n,[yj;yj[end]],color=colors[mod1(j,p)],where="post")
-    ylim(-1.05,1.05); xlim(0,n)
-    grid(true,axis="x")
-    xticks(0:n,[])
-    yticks([-1,0,1],[])
-    tick_params(axis="both", which="both", length=0)
-    box(false)
-  end
-  mysavefig("c1d_$ix")
+  #figure(4,figsize=(3,9)); clf()
+  #for j ∈ 1:n
+  #  yj = [x[j]* k[mod1(i-j+1,n),mod1(j,p)] for i=1:n]
+  #  subplot(n,1,j)
+  #  step(0:n,[yj;yj[end]],color=colors[mod1(j,p)],where="post")
+  #  ylim(-1.05,1.05); xlim(0,n)
+  #  grid(true,axis="x")
+  #  xticks(0:n,[])
+  #  yticks([-1,0,1],[])
+  #  tick_params(axis="both", which="both", length=0)
+  #  box(false)
+  #end
+  #mysavefig("c1d_$ix")
 end;
 
