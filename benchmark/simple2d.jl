@@ -1,5 +1,5 @@
 using PCC, LinearAlgebra, PyPlot
-p = 3; n = 18
+p = 3; n = 15
 
 mysavefig(x) = savefig("$x.png", bbox_inches="tight")
 
@@ -88,33 +88,27 @@ for i1=1:p,i2=1:p
 end
 
 s1 = [
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 1 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 1 0 0 0 0 0 1 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 1 0 0 0;
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 0 0 0 0;
+0 0 1 0 0 0 0 0 1;
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 0 0 0 0;
 ]
 
 s2 = [
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 1 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 1 0 0 0 1 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 1 0 0 0;
+0 0 0 0 0 0 0 0 0;
+0 0 0 1 0 0 0 1 0;
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 0 0 0 0;
 ]
 
 
@@ -146,9 +140,17 @@ push!(signals,circshift(s2,( 1,0)))
 push!(signals,circshift(s2,(0,-1)))
 push!(signals,circshift(s2,(0, 1)))
 
+# transform all signals
+ys = [ pcc2d_naive(signals[i],k) for i=1:length(signals) ]
+
+# figure out consistent scales
+s1 =  maximum(maximum.(ys[1:p^2]))
+s2 =  maximum(maximum.(ys[p^2+1:end]))
+
+
 for (ix,x) ∈ enumerate(signals)
   # the transformed signal
-  y = pcc2d_naive(x,k)
+  y = ys[ix]
   figure(1,figsize=(2,2),dpi=360); clf()
   imshow(x,cmap="gray")
   xticks((0:p:n).-0.5,[]); yticks((0:p:n).-0.5,[])
@@ -160,7 +162,10 @@ for (ix,x) ∈ enumerate(signals)
   mysavefig("x2d_$ix")
 
   figure(2,figsize=(2,2),dpi=360); clf()
-  imshow(y,cmap="gray")
+  imshow(y,cmap="gray");
+  # use same color scale for kernels
+  # and a different one for the other signals
+  clim(0,ix <= p^2 ? s1 : s2)
   xticks((0:p:n).-0.5,[]); yticks((0:p:n).-0.5,[])
   xticks((0:n).-0.5,[],minor=true); yticks((0:n).-0.5,[],minor=true)
   tick_params(axis="both", which="both", length=0)

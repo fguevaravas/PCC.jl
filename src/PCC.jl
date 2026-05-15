@@ -41,6 +41,37 @@ module PCC
  end
  pcc1d_naive_prep(k) = k
 
+ """
+ Different implementation. 
+ """
+ function pcc1d_v2(x,k)
+  n, = size(x); n_,p = size(k)
+  @assert (n%p == 0) && (n==n_)
+  q = n÷p
+  # make k the first p columns of matrix
+  kmat = zeros(eltype(k),size(k))
+  for  i=1:p
+   kmat[:,i] = circshift(k[:,i],i-1)
+  end
+  k̂ = fft(reshape(kmat,p,q,p),2)
+  x̂ = fft(reshape(x,p,q),2)
+  y  = zeros(complex(eltype(x)),p,q)
+  for i=1:p,j=1:q,l=1:p
+   y[i,j] += k̂[i,j,l]*x̂[l,j]
+  end
+  ifft!(y,2)
+  return y[:]
+ end
+
+ function pcc1d_v2_test(p,q)
+  n = p*q
+  x = randn(n)
+  k = randn(n,p)
+  y1=pcc1d_naive(x,k)
+  y2=pcc1d_v2(x,k)
+  norm(y1-y2)
+ end
+
  function pcc1d_fft_prep(k)
   n,p = size(k); @assert n%p == 0
   return fft(k,1)
@@ -134,6 +165,38 @@ module PCC
   return y
  end
  pcc2d_naive_prep(k) = k
+
+  """
+ Different implementation. 
+ """
+ function pcc2d_v2(x,k)
+  n1,n2 = size(x); n1_,n2_,p1,p2 = size(k)
+  @assert (n1%p1 == 0) && (n1==n1_)
+  @assert (n2%p2 == 0) && (n2==n2_)
+  q1 = n1÷p1; q2 = n2÷p2
+  # make k the first p columns of matrix
+  kmat = zeros(eltype(k),size(k))
+  for  i1=1:p1,i2=1:p2
+   kmat[:,:,i1,i2] = circshift(k[:,:,i1,i2],(i1-1,i2-1))
+  end
+  k̂ = fft(reshape(kmat,p1,q1,p2,q2,p1,p2),(2,4))
+  x̂ = fft(reshape(x,p1,q1,p2,q2),(2,4))
+  y  = zeros(complex(eltype(x)),p1,q1,p2,q2)
+  for i1=1:p1,j1=1:q1,i2=1:p2,j2=1:q2,l1=1:p1,l2=1:p2
+   y[i1,j1,i2,j2] += k̂[i1,j1,i2,j2,l1,l2]*x̂[l1,j1,l2,j2]
+  end
+  ifft!(y,(2,4))
+  return reshape(y,n1,n2)
+ end
+
+ function pcc2d_v2_test(p,q)
+  n = p.*q
+  x = randn(n...)
+  k = randn(n...,p...)
+  y1=pcc2d_naive(x,k)
+  y2=pcc2d_v2(x,k)
+  norm(y1-y2)
+ end
 
  function pcc2d_fft_prep(k)
   n1,n2,p1,p2 = size(k) 
