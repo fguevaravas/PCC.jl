@@ -1,33 +1,19 @@
 module PCC
+ # TODO: add @inbounds to inner loops before benchmarks
  using LinearAlgebra, FFTW
 
- export cc1d, pcc1d_naive_prep, pcc1d_naive, 
-  pcc1d_fft_prep, pcc1d_fft, 
-  pcc1d_fft_blk_v0_prep, pcc1d_fft_blk_v0,
-  pcc1d_fft_blk_v1_prep, pcc1d_fft_blk_v1,
-  pcc1d_fft_blk_v2_prep, pcc1d_fft_blk_v2
-
- export  pcc2d_naive_prep, pcc2d_naive, 
-  pcc2d_fft_prep, pcc2d_fft, 
-  pcc2d_fft_blk_v0_prep, pcc2d_fft_blk_v0,
-  pcc2d_fft_blk_v1_prep, pcc2d_fft_blk_v1,
-  pcc2d_fft_blk_v2_prep, pcc2d_fft_blk_v2
-
- ⊗ = kron
-
-
- function cc1d(x,k)
-  n = length(x)
-  y1=ifft(fft(x).*fft(k))
-  y2=zeros(n)
-  for i=1:n,j=1:n
-      y2[i] += x[j] * k[mod1(i-j+1,n)]
-  end
-  return y1,y2
- end
+ export pcc1d_naive_prep, pcc1d_naive, 
+  pcc1d_cc_prep, pcc1d_cc, 
+  pcc1d_improved_prep, pcc1d_improved, 
+  pcc2d_naive_prep, pcc2d_naive, 
+  pcc2d_cc_prep, pcc2d_cc, 
+  pcc2d_improved_prep, pcc2d_improved
 
  """
-  Naive implementation of periodic circular convolution
+  Naive implementation of 1D periodic circular convolution
+  Inputs:
+   x (size n) signal 
+   k (size n x p) first p columns of kernel matrix
  """
  function pcc1d_naive(x,k)
   n, = size(x); n_,p = size(k)
@@ -35,49 +21,50 @@ module PCC
   T = promote_type(eltype(x),eltype(k))
   y = zeros(T,n)
   for i=1:n,j=1:n
-      y[i] += x[j] * k[mod1(i-j+1,n),mod1(j,p)]
+   jmp = mod1(j,p)
+   y[i] += x[j] * k[mod1(i-j+jmp,n),jmp]
   end
   return y
  end
+
+ """
+ preparation phase for naive implementation
+ (not needed)
+ """
  pcc1d_naive_prep(k) = k
 
  """
- Different implementation. 
+  PCC 1D in terms of n circular convolutions. Preparation phase.
+  Inputs:
+   k (size n x p) first p columns of kernel matrix
+
+   Note: n % p == 0 is required
+   
+  Outputs:
+   k̂ (size n x p, complex float) precomputed DFTs of kernel
  """
- function pcc1d_v2(x,k)
-  n, = size(x); n_,p = size(k)
-  @assert (n%p == 0) && (n==n_)
-  q = n÷p
-  # make k the first p columns of matrix
-  kmat = zeros(eltype(k),size(k))
-  for  i=1:p
-   kmat[:,i] = circshift(k[:,i],i-1)
-  end
-  k̂ = fft(reshape(kmat,p,q,p),2)
-  x̂ = fft(reshape(x,p,q),2)
-  y  = zeros(complex(eltype(x)),p,q)
-  for i=1:p,j=1:q,l=1:p
-   y[i,j] += k̂[i,j,l]*x̂[l,j]
-  end
-  ifft!(y,2)
-  return y[:]
- end
-
- function pcc1d_v2_test(p,q)
-  n = p*q
-  x = randn(n)
-  k = randn(n,p)
-  y1=pcc1d_naive(x,k)
-  y2=pcc1d_v2(x,k)
-  norm(y1-y2)
- end
-
- function pcc1d_fft_prep(k)
+ function pcc1d_cc_prep(k)
   n,p = size(k); @assert n%p == 0
-  return fft(k,1)
+  k̂ = zeros(complex(float(eltype(k))),n,p)
+  for i=1:p
+   k̂[:,i] = circshift(k[:,i],-i+1)
+  end
+  fft!(k̂,1) # FFT in place
+  return k̂
  end
 
- function pcc1d_fft(x,k̂)
+ """
+  PCC 1D in terms of n circular convolutions. Application phase.
+  Inputs:
+   x (size n) signal 
+   k̂ (size n x p) output of pcc1d_cc_prep
+
+   Note: n % p == 0 is required
+
+  Outputs:
+   y (size n) result of PCC K *ₚ x
+ """ 
+ function pcc1d_cc(x,k̂)
   n,p = size(k̂); n_, = size(x)
   @assert (n%p == 0) && (n==n_)
   T = promote_type(eltype(x),eltype(k̂))
@@ -91,68 +78,54 @@ module PCC
   return ifft!(y)
  end 
 
+ """
+  Improved PCC 1D implementation. Preparation phase.
+  Inputs:
+   k (size n x p) first p columns of kernel matrix
 
- function pcc1d_fft_blk_v0_prep(k)
-  n,p = size(k); @assert n%p == 0
-  k̂ = zeros(complex(eltype(k)),size(k))
-  for i=1:p
-   k̂[:,i] = fft(circshift(k[:,i],i-1))
-  end
-  return k̂
- end
- 
- function pcc1d_fft_blk_v0(x,k̂)
-  n,p = size(k̂); n_, = size(x); q = n ÷ p
-  @assert (n%p == 0) && (n==n_)
-  T = promote_type(eltype(x),eltype(k̂))
-  y = zeros(T,n)
-  x̂ = fft(reshape(x,p,q),2) 
-  for j=1:p
-   y += k̂[:,j] .* (ones(p,1) ⊗ x̂[j:p:n])
-  end
-  return ifft!(y)
- end
- 
- # multi-index version
- pcc1d_fft_blk_v1_prep = pcc1d_fft_blk_v0_prep
- function pcc1d_fft_blk_v1(x,k̂)
-  n,p = size(k̂); n_, = size(x); q = n ÷ p
-  @assert (n%p == 0) && (n==n_)
-  T = promote_type(eltype(x),eltype(k̂))
-  y = zeros(T,q,p)
-  x̂ = fft(reshape(x,p,q),2) 
-  k̂ = reshape(k̂,q,p,p)
-  for j=1:p, i=1:p, l=1:q
-   @inbounds y[l,i] += k̂[l,i,j] * x̂[j,l]
-  end
-  return ifft!(y[:])
+   Note: n % p == 0 is required
+
+  Outputs:
+   k̂ (size p x q x p, complex float) precomputed DFTs of kernel
+ """
+ function pcc1d_improved_prep(k)
+  n,p = size(k)
+  @assert (n%p == 0)
+  q = n÷p
+  return fft(reshape(k,p,q,p),2)
  end
 
+ """
+  Improved PCC 1D implementation. Application phase.
+  Inputs:
+   x (size n) signal 
+   k̂ (size p x q x p) output of pcc1d_improved_prep
 
+   Note: n == p*q is required
 
- # MV version
- function pcc1d_fft_blk_v2_prep(k)
-  n,p = size(k); @assert n%p == 0; q = n ÷ p
-  k̂ = zeros(complex(eltype(k)),size(k))
-  for i=1:p
-   k̂[:,i] = fft(circshift(k[:,i],i-1))
+  Outputs:
+   y (size n) result of PCC K *ₚ x
+ """
+ function pcc1d_improved(x,k̂)
+  n, = size(x); p,q,p_ = size(k̂)
+  @assert (n%p == 0) && (p==p_) && (p*q==n)
+  x̂ = fft(reshape(x,p,q),2)
+  y  = zeros(eltype(x̂),p,q)
+  for l=1:p,j=1:q,i=1:p
+   y[i,j] += k̂[i,j,l]*x̂[l,j]
   end
-  k̂ = reshape(k̂,q,p,p)
-  return permutedims(k̂,(2,3,1))
+  ifft!(y,2)
+  return reshape(y,n)
  end
 
- function pcc1d_fft_blk_v2(x,k̂)
-  p,p_,q = size(k̂); n, = size(x); 
-  @assert (n == p*q) && (p == p_)
-  T = promote_type(eltype(x),eltype(k̂))
-  y = zeros(T,q,p)
-  x̂ = fft(reshape(x,p,q),2) 
-  for l=1:q
-   y[l,:] += k̂[:,:,l] * x̂[:,l]
-  end
-  return ifft!(y[:])
- end
+ """
+  Naive implementation of 2D periodic circular convolution
+  Inputs:
+   x (size n1 x n2) signal 
+   k (size n1 x n2 x p1 x p2) k = K[:,:,1:p1,1:p2] for kernel K
 
+   Note: n1 % p1 == 0 and n2 % p2 == 0 are required
+ """
  function pcc2d_naive(x,k)
   n1,n2 = size(x); n1_,n2_,p1,p2 = size(k)
   @assert (n1%p1==0) && (n2%p2==0) 
@@ -160,51 +133,93 @@ module PCC
   T = promote_type(eltype(x),eltype(k))
   y = zeros(T,n1,n2)
   for i1=1:n1,j1=1:n1,i2=1:n2,j2=1:n2
-      y[i1,i2] += x[j1,j2] * k[mod1(i1-j1+1,n1),mod1(i2-j2+1,n2),mod1(j1,p1),mod1(j2,p2)]
+      jmp1 = mod1(j1,p1)
+      jmp2 = mod1(j2,p2)
+      y[i1,i2] += x[j1,j2] * k[mod1(i1-j1+jmp1,n1),mod1(i2-j2+jmp2,n2),jmp1,jmp2]
   end
   return y
  end
+
+ """
+ preparation phase for naive implementation
+ (not needed)
+ """
  pcc2d_naive_prep(k) = k
 
-  """
- Different implementation. 
  """
- function pcc2d_v2(x,k)
-  n1,n2 = size(x); n1_,n2_,p1,p2 = size(k)
-  @assert (n1%p1 == 0) && (n1==n1_)
-  @assert (n2%p2 == 0) && (n2==n2_)
-  q1 = n1÷p1; q2 = n2÷p2
-  # make k the first p columns of matrix
-  kmat = zeros(eltype(k),size(k))
-  for  i1=1:p1,i2=1:p2
-   kmat[:,:,i1,i2] = circshift(k[:,:,i1,i2],(i1-1,i2-1))
-  end
-  k̂ = fft(reshape(kmat,p1,q1,p2,q2,p1,p2),(2,4))
+  Improved PCC 2D implementation. Preparation phase.
+  Inputs:
+   k (size n1 x n2 x p1 x p2) k = K[:,:,1:p1,1:p2] for kernel K
+
+   Note: n1 % p1 == 0 and n2 % p2 == 0 are required. Also
+   n1 == p1*q1 and n2 == p2*q2
+
+  Outputs:
+   k̂ (size p1 x q1 x p2 x q2 x p1 x p2, complex float) precomputed DFTs of kernel
+ """
+ function pcc2d_improved_prep(k)
+  n1,n2,p1,p2 = size(k)
+  @assert (n1%p1==0) && (n2%p2==0)
+  q1 = n1÷p1; q2 = n2÷p2;
+  return fft(reshape(k,p1,q1,p2,q2,p1,p2),(2,4))
+ end
+
+ """
+  Improved PCC 2D implementation. Application phase.
+  Inputs:
+   x (size n1 x n2) signal 
+   k̂ (size p1 x q1 x p2 x q2 x p1 x p2) output of pcc2d_improved_prep
+
+   Note: n1 == p1*q1 and n2 == p2*q2 are required
+
+  Outputs:
+   y (size n1 x n2) result of PCC K *ₚ x
+  """
+ function pcc2d_improved(x,k̂)
+  n1,n2 = size(x); p1,q1,p2,q2,p1_,p2_ = size(k̂)
+  @assert (n1==p1*q1) && (p1==p1_)
+  @assert (n2==p2*q2) && (p2==p2_)
   x̂ = fft(reshape(x,p1,q1,p2,q2),(2,4))
-  y  = zeros(complex(eltype(x)),p1,q1,p2,q2)
-  for i1=1:p1,j1=1:q1,i2=1:p2,j2=1:q2,l1=1:p1,l2=1:p2
+  y = zeros(eltype(x̂),p1,q1,p2,q2)
+  for l2=1:p2,l1=1:p1,j2=1:q2,i2=1:p2,j1=1:q1,i1=1:p1
    y[i1,j1,i2,j2] += k̂[i1,j1,i2,j2,l1,l2]*x̂[l1,j1,l2,j2]
   end
   ifft!(y,(2,4))
   return reshape(y,n1,n2)
  end
+ """
+  PCC 2D implementation with n circular convolutions. Preparation phase.
+  Inputs:
+   k (size n1 x n2 x p1 x p2) k = K[:,:,1:p1,1:p2] for kernel K
 
- function pcc2d_v2_test(p,q)
-  n = p.*q
-  x = randn(n...)
-  k = randn(n...,p...)
-  y1=pcc2d_naive(x,k)
-  y2=pcc2d_v2(x,k)
-  norm(y1-y2)
- end
+   Note: n1 % p1 == 0 and n2 % p2 == 0 are required
 
- function pcc2d_fft_prep(k)
+  Outputs:
+   k̂ (size n1 x n2 x p1 x p2, complex float) precomputed DFTs of kernel
+ """
+ function pcc2d_cc_prep(k)
   n1,n2,p1,p2 = size(k) 
   @assert n1%p1 == 0 && n2%p2 == 0
-  return fft(k,(1,2))
+  k̂ = zeros(complex(float(eltype(k))),n1,n2,p1,p2)
+  for i1=1:p1,i2=1:p2
+   k̂[:,:,i1,i2] = circshift(k[:,:,i1,i2],(-i1+1,-i2+1))
+  end
+  fft!(k̂,(1,2)) # FFT in place
+  return k̂
  end
+ """
+  PCC 2D implementation with n circular convolutions. Application phase
 
- function pcc2d_fft(x,k̂)
+  Inputs:
+   x (size n1 x n2) signal
+   k̂ (size n1 x n2 x p1 x p2) output of pcc2d_cc_prep
+
+   Note: n1 % p1 == 0 and n2 % p2 == 0 are required
+
+  Outputs:
+   y (size n1 x n2) result of PCC K *ₚ x
+ """
+ function pcc2d_cc(x,k̂)
   n1,n2 = size(x); n1_,n2_,p1,p2 = size(k̂)
   @assert (n1%p1==0) && (n2%p2==0) 
   @assert (n1==n1_) && (n2==n2_)
@@ -213,84 +228,10 @@ module PCC
   xi = zeros(T,n1,n2)
   for i1=1:p1, i2=1:p2
    xi .=0; xi[i1:p1:n1,i2:p2:n2]=x[i1:p1:n1,i2:p2:n2]
-   fft!(xi)
+   fft!(xi) # FFT in place
    y += k̂[:,:,i1,i2] .* xi
   end
   return ifft!(y)
  end 
-
- function pcc2d_fft_blk_v0_prep(k)
-  n1,n2,p1,p2 = size(k); @assert n1%p1==0 && n2%p2==0
-  k̂ = zeros(complex(eltype(k)),size(k))
-  for i1=1:p1,i2=1:p2
-   k̂[:,:,i1,i2] = fft(circshift(k[:,:,i1,i2],(i1-1,i2-1)))
-  end
-  return k̂
- end
- 
- function pcc2d_fft_blk_v0(x,k̂)
-  n1,n2,p1,p2 = size(k̂); n1_,n2_ = size(x)
-  q1 = n1 ÷ p1; q2 = n2 ÷ p2
-  @assert (n1%p1==0) && (n2%p2==0) 
-  @assert (n1==n1_) && (n2==n2_)
-  T = promote_type(eltype(x),eltype(k̂))
-  y = zeros(T,n1,n2)
-  x̂ = reshape(fft(reshape(x,p1,q1,p2,q2),(2,4)),n1,n2)
-  for j1=1:p1,j2=1:p2
-   y += k̂[:,:,j1,j2] .* (ones(p1,p2) ⊗ x̂[j1:p1:n1,j2:p2:n2])
-  end
-  return ifft!(y)
- end
-
- # multi-index version 
- pcc2d_fft_blk_v1_prep = pcc2d_fft_blk_v0_prep
- function pcc2d_fft_blk_v1(x,k̂)
-  n1,n2,p1,p2 = size(k̂); n1_,n2_ = size(x)
-  q1 = n1 ÷ p1; q2 = n2 ÷ p2
-  @assert (n1%p1==0) && (n2%p2==0) 
-  @assert (n1==n1_) && (n2==n2_)
-  T = promote_type(eltype(x),eltype(k̂))
-  y = zeros(T,q1,p1,q2,p2)
-  x̂ = fft(reshape(x,p1,q1,p2,q2),(2,4))
-  k̂ = reshape(k̂,q1,p1,q2,p2,p1,p2)
-  # the ordering of the indices in the nested for loop is s.t.
-  # we traverse k̂ sequentially in memory
-  for  j2=1:p2, j1=1:p1, i2=1:p2, l2=1:q2, i1=1:p1, l1=1:q1 
-   @inbounds y[l1,i1,l2,i2] += k̂[l1,i1,l2,i2,j1,j2] * x̂[j1,l1,j2,l2]
-  end
-  return ifft!(reshape(y,n1,n2))
- end
-
-  # MV version, all dimensions are reordered to make the
-  # p1p2 x p1p2 matrix vector product contiguous in memory
- function pcc2d_fft_blk_v2_prep(k)
-  n1,n2,p1,p2 = size(k); @assert n1%p1==0 && n2%p2==0
-  q1 = n1 ÷ p1; q2 = n2 ÷ p2
-  k̂ = zeros(complex(eltype(k)),size(k))
-  for i1=1:p1,i2=1:p2
-   k̂[:,:,i1,i2] = fft(circshift(k[:,:,i1,i2],(i1-1,i2-1)))
-  end
-  k̂ = reshape(k̂,q1,p1,q2,p2,p1,p2)
-  k̂ = permutedims(k̂,(2,4,5,6,1,3))
-
- end
-
- function pcc2d_fft_blk_v2(x,k̂)
-  p1,p2,p1_,p2_,q1,q2 = size(k̂); n1,n2 = size(x)
-  @assert (n1==p1*q1) && (n2==p2*q2) 
-  @assert (p1==p1_) && (p2==p2_)
-  T = promote_type(eltype(x),eltype(k̂))
-  y = zeros(T,p1*p2,q1,q2)
-  x̂ = fft(reshape(x,p1,q1,p2,q2),(2,4))
-  x̂ = permutedims(x̂,(1,3,2,4))
-  for l2=1:q2, l1=1:q1
-   D = reshape(k̂[:,:,:,:,l1,l2],p1*p2,p1*p2)
-   y[:,l1,l2] += D * vec(x̂[:,:,l1,l2])
-  end
-  y = reshape(y,p1,p2,q1,q2)
-  y = permutedims(y,(3,1,4,2))
-  y = reshape(y,n1,n2)
-  return ifft!(y)
- end
  
 end
