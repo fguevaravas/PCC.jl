@@ -40,6 +40,52 @@ function test_pcc_and_cc(pcc=pcc1d_gemv_naive,n=12)
  @test relerr(y2,y1) ≈ 0 atol=1e-10
 end
 
+# tests basic matrix matrix product
+function test_gemm(gemv=pcc1d_gemv_blkm,
+                   gemv_prep=pcc1d_gemv_blkm_prep,
+                   gemm=pcc1d_gemm,n=12,p=3)
+ a = randn(n...,p...)
+ b = randn(n...,p...)
+ x = randn(n...)
+ â = gemv_prep(a)
+ b̂ = gemv_prep(b)
+ ĉ = gemm(â,b̂)
+
+ cx1 = gemv(gemv(x,b̂),â)
+ cx2 = gemv(x,ĉ)
+
+ @test relerr(cx1,cx2) ≈ 0 atol=1e-10 
+end
+
+# tests basic solve
+function test_solve(gemv=pcc1d_gemv_blkm,
+                   gemv_prep=pcc1d_gemv_blkm_prep,
+                   solve=pcc1d_solve,n=12,p=3)
+ a = randn(n...,p...)
+ x = randn(n...)
+ â = gemv_prep(a)
+ y = gemv(x,â)
+
+ xx = solve(y,â)
+ @test relerr(x,xx) ≈ 0 atol=1e-5
+end
+
+# tests adjoint
+function test_adjoint(gemv=pcc1d_gemv_blkm,
+                      gemv_prep=pcc1d_gemv_blkm_prep,
+                      adjoint=pcc1d_adjoint,n=12,p=3)
+ a = randn(n...,p...)
+ â = gemv_prep(a)
+ ât = adjoint(â)
+ 
+ x = randn(n...)
+ y = randn(n...)
+ z1 = vec(y)'*vec(gemv(x,â))
+ z2 = vec(gemv(y,ât))'*vec(x)
+ @test relerr(z1,z2) ≈ 0 atol=1e-10
+end
+
+
 # TODO: add test for consistency with circular convolution (p=1)
 
 function test_pcc_all()
@@ -61,6 +107,49 @@ function test_pcc_all()
  test_pcc(pcc2d_gemv_naive,pcc2d_mv_functions,(32,27),(4,3))
  test_pcc(pcc2d_gemv_naive,pcc2d_mv_functions,(32,32),(32,32)) # p =n
  test_pcc(pcc2d_gemv_naive,pcc2d_mv_functions,(32,27),(32,27)) # p =n
+
+ # tests matrix matrix
+ @testset "gemm" begin
+ test_gemm(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_gemm,12,1)
+ test_gemm(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_gemm,12,4)
+ test_gemm(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_gemm,12,12)
+ test_gemm(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_gemm,15,5)
+ test_gemm(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_gemm,(27,32),(1,1))
+ test_gemm(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_gemm,(32,27),(1,1))
+ test_gemm(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_gemm,(27,32),(3,4))
+ test_gemm(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_gemm,(32,27),(4,3))
+ test_gemm(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_gemm,(27,32),(27,32))
+ test_gemm(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_gemm,(32,27),(32,27))
+ end
+
+ # tests adjoint
+ @testset "adjoint" begin
+ test_adjoint(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_adjoint,12,1)
+ test_adjoint(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_adjoint,12,4)
+ test_adjoint(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_adjoint,12,12)
+ test_adjoint(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_adjoint,15,5)
+ test_adjoint(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_adjoint,(27,32),(1,1))
+ test_adjoint(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_adjoint,(32,27),(1,1))
+ test_adjoint(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_adjoint,(27,32),(3,4))
+ test_adjoint(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_adjoint,(32,27),(4,3))
+ test_adjoint(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_adjoint,(32,32),(32,32))
+ test_adjoint(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_adjoint,(32,27),(32,27))
+ end
+ 
+ # tests solve
+ @testset "solve" begin
+ test_solve(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_solve,12,1)
+ test_solve(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_solve,12,3)
+ test_solve(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_solve,12,12) # p = n
+ test_solve(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_solve,100,5)
+ test_solve(pcc1d_gemv_blkm,pcc1d_gemv_blkm_prep,pcc1d_solve,64,8)
+ test_solve(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_solve,(27,32),(1,1))
+ test_solve(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_solve,(32,27),(1,1))
+ test_solve(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_solve,(27,32),(3,4))
+ test_solve(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_solve,(32,27),(4,3))
+ test_solve(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_solve,(32,32),(32,32)) # p =n
+ test_solve(pcc2d_gemv_blkm,pcc2d_gemv_blkm_prep,pcc2d_solve,(32,27),(32,27)) # p =n
+ end
 end
 
 test_pcc_all()

@@ -161,20 +161,20 @@ module PCC
  """
   multiplication of two PCCs with kernel matrices A and B
   Inputs:
-   â (size p x q x p) tensor representation for kernel matrix A
-   b̂ (size p x q x p) tensor representation for kernel matrix B
+   â (size p x p x q) blk matrix representation for A
+   b̂ (size p x p x q) blk matrix representation for B
 
-  Note: the tensor representations are obtained with pcc1d_gemv_improved_prep
+  Note: the tensor representations are obtained with pcc1d_gemv_blkm_prep
 
   Outputs:
    ĉ (size p x q x p) the prepared kernel to apply the operation A*B
  """
  function pcc1d_gemm(â,b̂)
   p,p_,q = size(â)
-  @assert (p==p_) && all([p,q,p_] .== size(b̂))
-  ĉ = zeros(promote_type(eltype(â),eltype(b̂)),p,q,p)
-  for j=1:p,l=1:q,i=1:p,k=1:p
-   @inbounds ĉ[i,l,j] = â[i,l,k] * b̂[k,l,j]
+  @assert (p==p_) && all([p,p_,q] .== size(b̂))
+  ĉ = zeros(promote_type(eltype(â),eltype(b̂)),p,p,q)
+  for j=1:q
+   @inbounds ĉ[:,:,j] = reshape(â[:,:,j],p,p) * reshape(b̂[:,:,j],p,p)
   end
   return ĉ
  end
@@ -208,7 +208,7 @@ module PCC
   ŷ = fft(reshape(y,p,q),2)
   x  = zeros(eltype(ŷ),p,q)
   for j=1:q
-   @inbounds x[:,j] .= k̂[:,:,j]\ŷ[:,j]
+   @inbounds x[:,j] .= â[:,:,j]\ŷ[:,j]
   end
   ifft!(x,2)
   return reshape(x,n)
@@ -387,7 +387,7 @@ module PCC
   @assert (p1==p1_) && (p2==p2_)
   @assert all([p1,p2,p1,p2,q1,q2] .== size(b̂))
   ĉ = zeros(promote_type(eltype(â),eltype(b̂)),p1*p2,p1*p2,q1,q2)
-  for j2=1:q1,j1=1:q1
+  for j2=1:q2,j1=1:q1
    @inbounds ĉ[:,:,j1,j2] = reshape(â[:,:,:,:,j1,j2],p1*p2,p1*p2)*reshape(b̂[:,:,:,:,j1,j2],p1*p2,p1*p2)
   end
   return reshape(ĉ,p1,p2,p1,p2,q1,q2)
