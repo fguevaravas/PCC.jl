@@ -1,18 +1,18 @@
 using PCC, LinearAlgebra, PyPlot
 # a simple 1D example
 p = 3; n=12
-k = [ 1 2 2 
-      0 1 0
+k = [ 1 0 0 
+      0 2 1
+      0 1 2 
+      0 0 0 
+      0 0 0
+      0 0 0
+      0 0 0 
+      0 0 0 
       0 0 0 
       0 0 0 
       0 0 0
-      0 0 0
-      0 0 0 
-      0 0 0 
-      0 0 0 
-      0 0 0 
-      0 0 0
-      0 0 1]
+      0 0 0]
 
 k = k * diagm(vec(1 ./sum(k,dims=1)))
 colors = ["blue","red","orange"]
@@ -53,7 +53,7 @@ for (ix,x) ∈ enumerate(signals)
   mysavefig("x1d_$ix")
   
   # the transformed signal
-  y = pcc1d_naive(x,k)
+  y = pcc1d_gemv_naive(x,k)
   figure(3,figsize=(2,1)); clf()
   step(0:n,[y;y[end]],color="black",where="post")
   xticks(0:n,[])

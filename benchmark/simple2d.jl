@@ -83,9 +83,9 @@ for i=1:9
 end
 k=circshift(k,(-2,-2,0))
 k = reshape(k,n,n,p,p)
-for i1=1:p,i2=1:p
- k[:,:,i1,i2] = circshift(k[:,:,i1,i2],(1-i1,1-i2))
-end
+#for i1=1:p,i2=1:p
+# k[:,:,i1,i2] = circshift(k[:,:,i1,i2],(1-i1,1-i2))
+#end
 
 s1 = [
 0 0 0 0 0 0 0 0 0;
@@ -141,7 +141,7 @@ push!(signals,circshift(s2,(0,-1)))
 push!(signals,circshift(s2,(0, 1)))
 
 # transform all signals
-ys = [ pcc2d_naive(signals[i],k) for i=1:length(signals) ]
+ys = [ pcc2d_gemv_naive(signals[i],k) for i=1:length(signals) ]
 
 # figure out consistent scales
 s1 =  maximum(maximum.(ys[1:p^2]))

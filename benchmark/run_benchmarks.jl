@@ -5,14 +5,18 @@ function bench_pcc1d_pfixed()
   for p ∈ [8], q ∈ 2 .^ (1:10)
     n = p*q
     k = randn(n,p)
-    k̂ = pcc1d_cc_prep(k)
+    k̂ = pcc1d_gemv_cc_prep(k)
     x = randn(n)
-    t = @benchmark pcc1d_cc($(randn(n)),$k̂) samples=1000
+    t = @benchmark pcc1d_gemv_cc($(randn(n)),$k̂) samples=1000
     push!(results,(p,q,"cc",t))
 
-    k̂ = pcc1d_improved_prep(k)
-    t = @benchmark pcc1d_improved($(randn(n)),$k̂) samples=1000
+    k̂ = pcc1d_gemv_improved_prep(k)
+    t = @benchmark pcc1d_gemv_improved($(randn(n)),$k̂) samples=1000
     push!(results,(p,q,"improved",t))
+
+    k̂ = pcc1d_gemv_blkm_prep(k)
+    t = @benchmark pcc1d_gemv_blkm($(randn(n)),$k̂) samples=1000
+    push!(results,(p,q,"blkm",t))
   end
   return results
 end
@@ -23,14 +27,18 @@ function bench_pcc1d_nfixed()
   for p ∈ 2 .^ (1:10)
     q = n ÷ p
     k = randn(n,p)
-    k̂ = pcc1d_cc_prep(k)
+    k̂ = pcc1d_gemv_cc_prep(k)
     x = randn(n)
-    t = @benchmark pcc1d_cc($(randn(n)),$k̂) samples=1000
+    t = @benchmark pcc1d_gemv_cc($(randn(n)),$k̂) samples=1000
     push!(results,(p,q,"cc",t))
 
-    k̂ = pcc1d_improved_prep(k)
-    t = @benchmark pcc1d_improved($(randn(n)),$k̂) samples=1000
+    k̂ = pcc1d_gemv_improved_prep(k)
+    t = @benchmark pcc1d_gemv_improved($(randn(n)),$k̂) samples=1000
     push!(results,(p,q,"improved",t))
+
+    k̂ = pcc1d_gemv_blkm_prep(k)
+    t = @benchmark pcc1d_gemv_blkm($(randn(n)),$k̂) samples=1000
+    push!(results,(p,q,"blkm",t))
   end
   return results
 end
@@ -41,14 +49,18 @@ function bench_pcc2d_pfixed()
     qq = (q,q)
     n = p.*qq
     k = randn(n...,p...)
-    k̂ = pcc2d_cc_prep(k)
+    k̂ = pcc2d_gemv_cc_prep(k)
     x = randn(n...)
-    t = @benchmark pcc2d_cc($(randn(n...)),$k̂) samples=1000
+    t = @benchmark pcc2d_gemv_cc($(randn(n...)),$k̂) samples=1000
     push!(results,(p,qq,"cc",t))
 
-    k̂ = pcc2d_improved_prep(k)
-    t = @benchmark pcc2d_improved($(randn(n...)),$k̂) samples=1000
+    k̂ = pcc2d_gemv_improved_prep(k)
+    t = @benchmark pcc2d_gemv_improved($(randn(n...)),$k̂) samples=1000
     push!(results,(p,qq,"improved",t))
+
+    k̂ = pcc2d_gemv_blkm_prep(k)
+    t = @benchmark pcc2d_gemv_blkm($(randn(n...)),$k̂) samples=1000
+    push!(results,(p,qq,"blkm",t))
   end
   return results
 end
@@ -60,20 +72,24 @@ function bench_pcc2d_nfixed()
     pp = (p,p)
     q = n .÷ pp
     k = randn(n...,pp...)
-    k̂ = pcc2d_cc_prep(k)
+    k̂ = pcc2d_gemv_cc_prep(k)
     x = randn(n...)
-    t = @benchmark pcc2d_cc($(randn(n...)),$k̂) samples=1000
+    t = @benchmark pcc2d_gemv_cc($(randn(n...)),$k̂) samples=1000
     push!(results,(pp,q,"cc",t))
 
-    k̂ = pcc2d_improved_prep(k)
-    t = @benchmark pcc2d_improved($(randn(n...)),$k̂) samples=1000
+    k̂ = pcc2d_gemv_improved_prep(k)
+    t = @benchmark pcc2d_gemv_improved($(randn(n...)),$k̂) samples=1000
     push!(results,(pp,q,"improved",t))
+
+    k̂ = pcc2d_gemv_blkm_prep(k)
+    t = @benchmark pcc2d_gemv_blkm($(randn(n...)),$k̂) samples=1000
+    push!(results,(pp,q,"blkm",t))
   end
   return results
 end
 
-algos = [ "cc","improved"]
-algo_legend = Dict( "cc" => "circular conv.", "improved"=>"improved")
+algos = [ "cc","improved","blkm"]
+algo_legend = Dict( "cc" => "circular conv.", "improved"=>"improved","blkm"=>"block matrix")
 
 # extract time (in nanoseconds) and memory usage (in bytes)
 times(z) = [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]
