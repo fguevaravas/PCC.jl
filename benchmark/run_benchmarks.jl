@@ -5,18 +5,14 @@ function bench_pcc1d_pfixed()
   for p ∈ [8], q ∈ 2 .^ (1:10)
     n = p*q
     k = randn(n,p)
-    k̂ = pcc1d_fft_prep(k)
+    k̂ = pcc1d_cc_prep(k)
     x = randn(n)
-    t = @benchmark pcc1d_fft($(randn(n)),$k̂) samples=1000
-    push!(results,(p,q,"fft",t))
+    t = @benchmark pcc1d_cc($(randn(n)),$k̂) samples=1000
+    push!(results,(p,q,"cc",t))
 
-    k̂ = pcc1d_fft_blk_v1_prep(k)
-    t = @benchmark pcc1d_fft_blk_v1($(randn(n)),$k̂) samples=1000
-    push!(results,(p,q,"blk_v1",t))
-
-    k̂ = pcc1d_fft_blk_v2_prep(k)
-    t = @benchmark pcc1d_fft_blk_v2($(randn(n)),$k̂) samples=1000
-    push!(results,(p,q,"blk_v2",t))
+    k̂ = pcc1d_improved_prep(k)
+    t = @benchmark pcc1d_improved($(randn(n)),$k̂) samples=1000
+    push!(results,(p,q,"improved",t))
   end
   return results
 end
@@ -27,18 +23,14 @@ function bench_pcc1d_nfixed()
   for p ∈ 2 .^ (1:10)
     q = n ÷ p
     k = randn(n,p)
-    k̂ = pcc1d_fft_prep(k)
+    k̂ = pcc1d_cc_prep(k)
     x = randn(n)
-    t = @benchmark pcc1d_fft($(randn(n)),$k̂) samples=1000
-    push!(results,(p,q,"fft",t))
+    t = @benchmark pcc1d_cc($(randn(n)),$k̂) samples=1000
+    push!(results,(p,q,"cc",t))
 
-    k̂ = pcc1d_fft_blk_v1_prep(k)
-    t = @benchmark pcc1d_fft_blk_v1($(randn(n)),$k̂) samples=1000
-    push!(results,(p,q,"blk_v1",t))
-
-    k̂ = pcc1d_fft_blk_v2_prep(k)
-    t = @benchmark pcc1d_fft_blk_v2($(randn(n)),$k̂) samples=1000
-    push!(results,(p,q,"blk_v2",t))
+    k̂ = pcc1d_improved_prep(k)
+    t = @benchmark pcc1d_improved($(randn(n)),$k̂) samples=1000
+    push!(results,(p,q,"improved",t))
   end
   return results
 end
@@ -49,18 +41,14 @@ function bench_pcc2d_pfixed()
     qq = (q,q)
     n = p.*qq
     k = randn(n...,p...)
-    k̂ = pcc2d_fft_prep(k)
+    k̂ = pcc2d_cc_prep(k)
     x = randn(n...)
-    t = @benchmark pcc2d_fft($(randn(n...)),$k̂) samples=1000
-    push!(results,(p,qq,"fft",t))
+    t = @benchmark pcc2d_cc($(randn(n...)),$k̂) samples=1000
+    push!(results,(p,qq,"cc",t))
 
-    k̂ = pcc2d_fft_blk_v1_prep(k)
-    t = @benchmark pcc2d_fft_blk_v1($(randn(n...)),$k̂) samples=1000
-    push!(results,(p,qq,"blk_v1",t))
-
-    k̂ = pcc2d_fft_blk_v2_prep(k)
-    t = @benchmark pcc2d_fft_blk_v2($(randn(n...)),$k̂) samples=1000
-    push!(results,(p,qq,"blk_v2",t))
+    k̂ = pcc2d_improved_prep(k)
+    t = @benchmark pcc2d_improved($(randn(n...)),$k̂) samples=1000
+    push!(results,(p,qq,"improved",t))
   end
   return results
 end
@@ -72,25 +60,20 @@ function bench_pcc2d_nfixed()
     pp = (p,p)
     q = n .÷ pp
     k = randn(n...,pp...)
-    k̂ = pcc2d_fft_prep(k)
+    k̂ = pcc2d_cc_prep(k)
     x = randn(n...)
-    t = @benchmark pcc2d_fft($(randn(n...)),$k̂) samples=1000
-    push!(results,(pp,q,"fft",t))
+    t = @benchmark pcc2d_cc($(randn(n...)),$k̂) samples=1000
+    push!(results,(pp,q,"cc",t))
 
-    k̂ = pcc2d_fft_blk_v1_prep(k)
-    t = @benchmark pcc2d_fft_blk_v1($(randn(n...)),$k̂) samples=1000
-    push!(results,(pp,q,"blk_v1",t))
-
-    k̂ = pcc2d_fft_blk_v2_prep(k)
-    t = @benchmark pcc2d_fft_blk_v2($(randn(n...)),$k̂) samples=1000
-    push!(results,(pp,q,"blk_v2",t))
+    k̂ = pcc2d_improved_prep(k)
+    t = @benchmark pcc2d_improved($(randn(n...)),$k̂) samples=1000
+    push!(results,(pp,q,"improved",t))
   end
   return results
 end
 
-#algos = [ "fft","blk_v1","blk_v2"]
-algos = [ "fft","blk_v1"]
-algo_legend = Dict( "fft" => "fft", "blk_v1"=>"fft improved", "blk_v2"=>"fft improved mv")
+algos = [ "cc","improved"]
+algo_legend = Dict( "cc" => "circular conv.", "improved"=>"improved")
 
 # extract time (in nanoseconds) and memory usage (in bytes)
 times(z) = [ mean(z[:,:bench][j].times) for j ∈ 1:size(z,1) ]
@@ -158,19 +141,19 @@ end
 
 function plot_pcc_speedups(res1p,res1n,res2p,res2n)
   figure(1,figsize=figsize); clf()
-  z = res1p[res1p.algo .== "fft",:]
-  semilogx(z[:,:p].*z[:,:q],speedups(res1p,"fft","blk_v1"),label="1D")
-  z = res2p[res2p.algo .== "fft",:]
-  semilogx(ns(z),speedups(res2p,"fft","blk_v1"),label="2D")
+  z = res1p[res1p.algo .== "cc",:]
+  semilogx(z[:,:p].*z[:,:q],speedups(res1p,"cc","improved"),label="1D")
+  z = res2p[res2p.algo .== "cc",:]
+  semilogx(ns(z),speedups(res2p,"cc","improved"),label="2D")
   xlabel("n"); ylim(bottom=0)
   legend()
   mysavefig("pfixed_speedup")
 
   figure(2,figsize=figsize); clf()
-  z = res1n[res1n.algo .== "fft",:]
-  semilogx(z[:,:p],speedups(res1n,"fft","blk_v1"),label="1D")
-  z = res2n[res2n.algo .== "fft",:]
-  semilogx(periods(z),speedups(res2n,"fft","blk_v1"),label="2D")
+  z = res1n[res1n.algo .== "cc",:]
+  semilogx(z[:,:p],speedups(res1n,"cc","improved"),label="1D")
+  z = res2n[res2n.algo .== "cc",:]
+  semilogx(periods(z),speedups(res2n,"cc","improved"),label="2D")
   xlabel("p"); ylim(bottom=0)
   legend()
   mysavefig("nfixed_speedup")
