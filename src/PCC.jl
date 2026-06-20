@@ -5,10 +5,12 @@ module PCC
   pcc1d_gemv_cc_prep, pcc1d_gemv_cc, 
   pcc1d_gemv_improved_prep, pcc1d_gemv_improved, 
   pcc1d_gemv_blkm_prep, pcc1d_gemv_blkm, 
+  pcc1d_cond, pcc1d_svdvals, pcc1d_eye,
   pcc2d_gemv_naive_prep, pcc2d_gemv_naive, 
   pcc2d_gemv_cc_prep, pcc2d_gemv_cc, 
   pcc2d_gemv_improved_prep, pcc2d_gemv_improved,
-  pcc2d_gemv_blkm_prep, pcc2d_gemv_blkm 
+  pcc2d_gemv_blkm_prep, pcc2d_gemv_blkm, 
+  pcc2d_cond, pcc2d_svdvals, pcc2d_eye
 
  export pcc1d_gemm, pcc2d_gemm, pcc1d_adjoint, pcc2d_adjoint,
   pcc1d_solve, pcc2d_solve
@@ -214,6 +216,48 @@ module PCC
   return reshape(x,n)
  end
 
+ """
+  computes the singular values via blk matrix representation of A
+  Inputs: 
+   â  (size p x p x q) blk matrix representation for kernel matrix A
+  Outputs:
+   s (size  p x q) singular values of each each of the blocks
+ """
+ function pcc1d_svdvals(â)
+  p,p_,q = size(â)
+  @assert (p==p_)
+  s = zeros(p,q)
+  for j=1:q
+   @inbounds s[:,j] .= svdvals(â[:,:,j])
+  end
+  return s
+ end
+
+ """
+  computes the (2-norm) condition number via blk matrix representation of A
+  Inputs: 
+   â  (size p x p x q) blk matrix representation for kernel matrix A
+  Outputs:
+   cond(A)
+ """
+ function pcc1d_cond(â)
+  s = pcc1d_svdvals(â)
+  return maximum(s)/minimum(s)
+ end
+
+ """ 
+ the identity compatible with blk matrix representation
+ Inputs:
+  n,p (Integers) to specify the kernel size and period
+ Outputs:
+  Id (p x p x q) block diagonal representation of identity
+ """
+ function pcc1d_eye(n,p)
+  @assert (n%p == 0)
+  q = n ÷ p
+  Id = [ float(i==j) for i=1:p, j=1:p, k=1:q ]
+  return Id
+ end
 
  """
   Naive implementation of 2D periodic circular convolution
@@ -431,6 +475,50 @@ module PCC
   ifft!(x,(2,4))
   return reshape(x,n1,n2)
  end
+
+ """
+  computes the singular values via blk matrix representation of A
+  Inputs: 
+   â  (size p1 x p2 x p1 x p2 x q1 x q2) blk matrix representation for kernel matrix A
+  Outputs:
+   s (size p1*p2 x q1 x q2) singular values of each each of the blocks
+ """
+ function pcc2d_svdvals(â)
+  p1,p2,p1_,p2_,q1,q2 = size(â)
+  @assert (p1==p1_) && (p2==p2_)
+  s = zeros(p1*p2,q1,q2)
+  for j2=1:q2,j1=1:q1
+   @inbounds s[:,j1,j2] .= svdvals(reshape(â[:,:,:,:,j1,j2],p1*p2,p1*p2))
+  end
+  return s
+ end
+
+  """
+  computes the (2-norm) condition number via blk matrix representation of A
+  Inputs: 
+   â  (size p1 x p2 x p1 x p2 x q1 x q2) blk matrix representation for kernel matrix A
+  Outputs:
+   cond(A)
+ """
+ function pcc2d_cond(â)
+  s =  pcc2d_svdvals(â)
+  return maximum(s)/minimum(s)
+ end
+
+ """ 
+ the identity compatible with blk matrix representation
+ Inputs:
+  n1, n2, p1, p2 (Integers) dimension and period
+ Outputs:
+  Id (p1 x p2 x p1 x p2 x q1 x q1) Identity representation
+ """
+ function pcc2d_eye(n1,n2,p1,p2)
+  @assert (n1%p1 == 0) && (n2%p2 == 0)
+  q1 = n1 ÷ p1; q2 = n2 ÷ p2
+  Id = [ float((i1==j1) && (i2==j2)) for i1=1:p1,i2=1:p2,j1=1:p1,j2=1:p2,k1=1:q1,k2=1:q2 ]
+  return Id
+ end
+
 
  
 end

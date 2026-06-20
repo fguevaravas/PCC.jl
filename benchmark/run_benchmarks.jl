@@ -88,7 +88,7 @@ function bench_pcc2d_nfixed()
   return results
 end
 
-algos = [ "cc","improved","blkm"]
+algos = [ "cc","improved"] # blkm ommitted!
 algo_legend = Dict( "cc" => "circular conv.", "improved"=>"improved","blkm"=>"block matrix")
 
 # extract time (in nanoseconds) and memory usage (in bytes)
@@ -115,6 +115,7 @@ function plot_pcc1d_pfixed(res)
     z = res[res.algo .== algo,:]
     loglog(z[:,:p].*z[:,:q], times(z)/1e3, label=algo_legend[algo])
   end
+  grid(true)
   legend()
   xlabel("n")
   ylabel("time (μs)")
@@ -125,6 +126,7 @@ function plot_pcc1d_pfixed(res)
     z = res[res.algo .== algo,:]
     loglog(z[:,:p].*z[:,:q], memory(z), label=algo_legend[algo])
   end
+  grid(true)
   legend()
   xlabel("n")
   ylabel("memory (bytes)")
@@ -137,7 +139,7 @@ function plot_pcc1d_nfixed(res)
     z = res[res.algo .== algo,:]
     loglog(z[:,:p], times(z)/1e3, label=algo_legend[algo])
   end
-
+  grid(true)
   legend()
   xlabel("p")
   ylabel("time (ms)")
@@ -148,6 +150,7 @@ function plot_pcc1d_nfixed(res)
     z = res[res.algo .== algo,:]
     loglog(z[:,:p], memory(z)/1e3, label=algo_legend[algo])
   end
+  grid(true)
   legend()
   xlabel("p")
   ylabel("memory (bytes)")
@@ -162,6 +165,7 @@ function plot_pcc_speedups(res1p,res1n,res2p,res2n)
   z = res2p[res2p.algo .== "cc",:]
   semilogx(ns(z),speedups(res2p,"cc","improved"),label="2D")
   xlabel("n"); ylim(bottom=0)
+  grid(true)
   legend()
   mysavefig("pfixed_speedup")
 
@@ -171,6 +175,7 @@ function plot_pcc_speedups(res1p,res1n,res2p,res2n)
   z = res2n[res2n.algo .== "cc",:]
   semilogx(periods(z),speedups(res2n,"cc","improved"),label="2D")
   xlabel("p"); ylim(bottom=0)
+  grid(true)
   legend()
   mysavefig("nfixed_speedup")
 
@@ -181,6 +186,7 @@ function plot_pcc2d_pfixed(res)
     z = res[res.algo .== algo,:]
     loglog(ns(z), times(z)/1e6, label=algo_legend[algo])
   end
+  grid(true)
   legend()
   xlabel("n")
   ylabel("time (ms)")
@@ -191,6 +197,7 @@ function plot_pcc2d_pfixed(res)
     z = res[res.algo .== algo,:]
     loglog(ns(z), memory(z), label=algo_legend[algo])
   end
+  grid(true)
   legend()
   xlabel("n")
   ylabel("memory (bytes)")
@@ -203,8 +210,9 @@ function plot_pcc2d_nfixed(res)
     z = res[res.algo .== algo,:]
     loglog(periods(z), times(z)/1e6, label=algo_legend[algo])
   end
+  grid(true)
   legend()
-  xlabel("n")
+  xlabel("p")
   ylabel("time (ms)")
   mysavefig("nfixed_time_2d")
 
@@ -213,8 +221,9 @@ function plot_pcc2d_nfixed(res)
     z = res[res.algo .== algo,:]
     loglog(periods(z),memory(z), label=algo_legend[algo])
   end
+  grid(true)
   legend()
-  xlabel("n")
+  xlabel("p")
   ylabel("memory (bytes)")
   mysavefig("nfixed_mem_2d")
 end
