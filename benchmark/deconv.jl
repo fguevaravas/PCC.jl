@@ -6,6 +6,7 @@ periodic difference operator (block matrix representation)
 """
 function gradient(n1,n2,p1,p2)
  @assert (n1%p1 == 0) && (n2%p2 == 0)
+ @assert (n1>1) && (n2>1)
  q1 = n1 ÷ p1; q2 = n2 ÷ p2
  D1 = zeros(n1,n2,p1,p2)
  D2 = zeros(n1,n2,p1,p2)
@@ -16,7 +17,7 @@ function gradient(n1,n2,p1,p2)
  return D1,D2
 end
 
-# double checks we are constructing right object
+# double checks we are constructing right difference operator
 # by checking its action is correct
 function test_gradient(n=(128,128),p=(4,4))
  x = randn(n...)
@@ -27,6 +28,14 @@ function test_gradient(n=(128,128),p=(4,4))
  D2x = circshift(x,(0,1)) - x
  println("should be small = ",norm(pcc2d_gemv_blkm(x,D̂1)-D1x))
  println("should be small = ",norm(pcc2d_gemv_blkm(x,D̂2)-D2x))
+end
+
+function test_gradient_all()
+ test_gradient((20,20),(1,1))
+ test_gradient((20,20),(4,4))
+ test_gradient((20,20),(4,5))
+ test_gradient((20,20),(5,4))
+ test_gradient((20,20),(20,20))
 end
 
 function run_deconv()

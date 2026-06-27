@@ -38,12 +38,13 @@ function periodic_laplacian_2d(n1,n2,p1,p2,σ1,σ2)
   L[mod1(j1-1,n1),j2,j1,j2] = -σ1[mod1(j1-1,p1),j2]
   L[j1,mod1(j2+1,n2),j1,j2] = -σ2[j1,j2]
   L[j1,mod1(j2-1,n2),j1,j2] = -σ2[j1,mod1(j2-1,p2)]
-  L[j1,j2,j1,j2] += σ1[j1,j2] + σ1[mod1(j1-1,p1),j2] + σ2[j1,j2] + σ2[j1,mod1(j2-1,p2)]
+  L[j1,j2,j1,j2] += σ1[j1,j2] + σ1[mod1(j1-1,p1),j2] 
+  L[j1,j2,j1,j2] += σ2[j1,j2] + σ2[j1,mod1(j2-1,p2)]
  end
  return L
 end
 
-# we test by calculating this in a different way
+# we test by calculating Laplacian in a different way
 function test_periodic_laplacian_1d(n=20,p=4)
  x = randn(n)
  σ = rand(p)
@@ -57,7 +58,7 @@ function test_periodic_laplacian_1d(n=20,p=4)
  println("should be small = ",norm(Lx - pcc1d_gemv_blkm(x,L̂)))
 end
 
-# we test by calculating this in a different way
+# we test by calculating Laplacian in a different way
 function test_periodic_laplacian_2d(n=(20,20),p=(4,5))
  x = randn(n...)
  σ1 = rand(p...)
@@ -73,6 +74,21 @@ function test_periodic_laplacian_2d(n=(20,20),p=(4,5))
   Lx[i1,i2] += σ2[mod1(i1,p1),mod1(i2-1,p2)]*x[i1,i2] - σ2[mod1(i1,p1),mod1(i2-1,p2)]*x[i1,mod1(i2-1,n2)]
  end
  println("should be small = ",norm(Lx - pcc2d_gemv_blkm(x,L̂)))
+end
+
+function test_laplacian()
+ test_periodic_laplacian_1d(20,1)
+ test_periodic_laplacian_1d(20,4)
+ test_periodic_laplacian_1d(81,3)
+ test_periodic_laplacian_1d(20,20)
+
+ test_periodic_laplacian_2d((20,20),(1,1))
+ test_periodic_laplacian_2d((20,20),(5,4))
+ test_periodic_laplacian_2d((20,20),(4,5))
+ test_periodic_laplacian_2d((20,20),(20,20))
+ test_periodic_laplacian_2d((20,81),(4,3))
+ test_periodic_laplacian_2d((81,20),(3,4))
+
 end
 
 function greenper1d(n=20,p=4,k=1+1e-2im)
