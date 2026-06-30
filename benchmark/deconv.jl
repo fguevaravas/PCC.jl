@@ -46,40 +46,57 @@ function run_deconv()
  q = size(x,1) ÷ p
  n = p*q 
  x = x[1:n,1:n]
+
+ inset_offset = (108,234)
+ inset_size = (48,48)
+ inset(x) = x[inset_offset[1] .+ (0:inset_size[1]-1), 
+              inset_offset[2] .+ (0:inset_size[2]-1)]
  
  # use digits as PSFs and correct for shifts so they don't dance around
  include("digits.jl")
  k = zeros(n,n,p^2)
  for i=1:9
-  #k[1:5,1:5,i] = digits[:,:,i]
-  #Z = rand(5,5)
   Z = digits[:,:,i]
-  k[1:5,1:5,i] = Z/sum(vec(Z))
+  #k[1:5,1:5,i] = Z / sum(vec(Z)) 
+  k[1:5,1:5,i] = Z 
  end
  k = circshift(k,(-2,-2,0))
  k = reshape(k,n,n,p,p)
  k̂ = pcc2d_gemv_blkm_prep(k)
  
+ # original
  figure(1)
  imshow(x,cmap="gray")
- 
+ imsave("deconv_xtrue.png",x,cmap="gray")
+ imsave("deconv_xtrue_inset.png",inset(x),cmap="gray")
  
  println("conditioning = ",pcc2d_cond(k̂))
  s = pcc2d_svdvals(k̂)
  s = sort(vec(s),rev=true)
- figure(2)
- semilogy(s)
+
+ # singular values
+ figure(2,figsize=(2,1.5))
+ semilogy(s,"C0")
+ xlabel(L"$i$")
+ ylabel(L"$\sigma_i$")
+ grid(true)
+ savefig("deconv_svdvals.pgf",bbox_inches="tight")
  
- y = real(pcc2d_gemv_blkm(x,k̂))
+ y = real.(pcc2d_gemv_blkm(x,k̂))
  figure(3);
  imshow(y,cmap="gray")
+ imsave("deconv_ytrue.png",y,cmap="gray")
+ imsave("deconv_ytrue_inset.png",inset(y),cmap="gray")
+
  
  # now add noise
  Random.seed!(33)
  nlvl = 1e-2
- y_noisy = y + nlvl*randn(n,n);
+ y_noisy = y + nlvl*maximum(y)*randn(n,n);
  figure(4);
  imshow(y_noisy,cmap="gray")
+ imsave("deconv_ynoisy.png",y_noisy,cmap="gray")
+ imsave("deconv_ynoisy_inset.png",inset(y_noisy),cmap="gray")
  
  
  # L-curve
@@ -100,23 +117,27 @@ function run_deconv()
   resnrm[iα] = norm(pcc2d_gemv_blkm(xα,k̂) - y_noisy)
  end
  
- figure(5)
- loglog(resnrm,xnrm)
- xlabel("residual norm")
- ylabel("regularization norm")
+ figure(5,figsize=(2,1.5))
+ loglog(resnrm,xnrm,"C0+-")
+ xlabel(L"$\|Ax - y\|_2^2$")
+ ylabel(L"$\|Dx\|_2^2$")
  
  # do normal equations + Tikhonov
- α = 1/4
- @time x_noisy = pcc2d_solve(k̂ty,pcc2d_gemm(k̂t,k̂) + α^2*L̂)
+ α = 2.0
+ @time x_noisy = real.(pcc2d_solve(k̂ty,pcc2d_gemm(k̂t,k̂) + α^2*L̂))
  
  # plot reg parameter choice on L curve
  nrmx = sqrt(norm(pcc2d_gemv_blkm(x_noisy,D̂1))^2 + norm(pcc2d_gemv_blkm(x_noisy,D̂2))^2) 
  nrmres = norm(pcc2d_gemv_blkm(x_noisy,k̂) - y_noisy)
  loglog(nrmres,nrmx,"r*")
+ grid(true)
+ savefig("deconv_lcurve.pgf",bbox_inches="tight")
  
  
  figure(6)
- imshow(real(x_noisy),cmap="gray")
+ imshow(x_noisy,cmap="gray")
+ imsave("deconv_xnoisy.png",x_noisy,cmap="gray")
+ imsave("deconv_xnoisy_inset.png",inset(x_noisy),cmap="gray")
  
  println("system size |n| = ",n*n)
  println("relative error with ",nlvl*100,"% noise = ",100*norm(x-x_noisy)/norm(x),"%")
