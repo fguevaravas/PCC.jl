@@ -38,3 +38,13 @@ res=load("bench.jld2","res")
 plot_all(res...)
 ```
 
+The benchmarks folder also contains the following code:
+* `simple1d.jl`: simple 1D example. this is a script, `include("simple1d.jl")
+  to run
+* `simple2d.jl`: simple 1D example. this is a script, `include("simple2d.jl")
+  to run
+* `deconv.jl`: deconvolution example. include it and use `run_deconv()` to run
+* `greenper.jl`: example of Green function for a periodic network. use
+  `run_greenper2d()` to run
+* `digits.jl`: this file is included in `simple2d.jl` and `deconv.jl`. It
+  defines a (3,3)-periodic kernel with digits from 0 to 9

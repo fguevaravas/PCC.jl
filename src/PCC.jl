@@ -5,12 +5,12 @@ module PCC
   pcc1d_gemv_cc_prep, pcc1d_gemv_cc, 
   pcc1d_gemv_improved_prep, pcc1d_gemv_improved, 
   pcc1d_gemv_blkm_prep, pcc1d_gemv_blkm, 
-  pcc1d_cond, pcc1d_svdvals, pcc1d_eye,
+  pcc1d_cond, pcc1d_svdvals, pcc1d_eye, pcc1d_eigvals,
   pcc2d_gemv_naive_prep, pcc2d_gemv_naive, 
   pcc2d_gemv_cc_prep, pcc2d_gemv_cc, 
   pcc2d_gemv_improved_prep, pcc2d_gemv_improved,
   pcc2d_gemv_blkm_prep, pcc2d_gemv_blkm, 
-  pcc2d_cond, pcc2d_svdvals, pcc2d_eye
+  pcc2d_cond, pcc2d_svdvals, pcc2d_eye, pcc2d_eigvals
 
  export pcc1d_gemm, pcc2d_gemm, pcc1d_adjoint, pcc2d_adjoint,
   pcc1d_solve, pcc2d_solve
@@ -229,6 +229,37 @@ module PCC
   s = zeros(p,q)
   for j=1:q
    @inbounds s[:,j] .= svdvals(â[:,:,j])
+  end
+  return s
+ end
+
+ """
+  computes the eigenvalues via blk matrix representation of A
+  Inputs: 
+   â  (size p x p x q) blk matrix representation for kernel matrix A
+  Outputs:
+   s (size  p x q) eigen values of each each of the blocks
+
+   pcc1d_eigvals(â,b̂) does the same for the matrix pencil A x = λ B x
+
+ """
+ function pcc1d_eigvals(â)
+  p,p_,q = size(â)
+  @assert (p==p_)
+  s = zeros(ComplexF64,p,q)
+  for j=1:q
+   @inbounds s[:,j] .= eigvals(â[:,:,j])
+  end
+  return s
+ end
+
+ function pcc1d_eigvals(â,b̂)
+  p,p_,q = size(â)
+  @assert all(size(â) .== size(b̂) )
+  @assert (p==p_)
+  s = zeros(ComplexF64,p,q)
+  for j=1:q
+   @inbounds s[:,j] .= eigvals(â[:,:,j],b̂[:,:,j])
   end
   return s
  end
@@ -489,6 +520,37 @@ module PCC
   s = zeros(p1*p2,q1,q2)
   for j2=1:q2,j1=1:q1
    @inbounds s[:,j1,j2] .= svdvals(reshape(â[:,:,:,:,j1,j2],p1*p2,p1*p2))
+  end
+  return s
+ end
+
+  """
+  computes the eigenvalues via blk matrix representation of A
+  Inputs: 
+   â  (size p1 x p2 x p1 x p2 x q1 x q2) blk matrix representation for kernel matrix A
+  Outputs:
+   s (size p1*p2 x q1 x q2) eigenvalues of each each of the blocks
+
+   pcc2d_eigvals(â,b̂) does the same for the matrix pencil A x = λ B x
+ """
+ function pcc2d_eigvals(â)
+  p1,p2,p1_,p2_,q1,q2 = size(â)
+  @assert (p1==p1_) && (p2==p2_)
+  s = zeros(ComplexF64,p1*p2,q1,q2)
+  for j2=1:q2,j1=1:q1
+   @inbounds s[:,j1,j2] .= eigvals(reshape(â[:,:,:,:,j1,j2],p1*p2,p1*p2))
+  end
+  return s
+ end
+
+ function pcc2d_eigvals(â,b̂)
+  p1,p2,p1_,p2_,q1,q2 = size(â)
+  @assert all( size(â) .== size(b̂) )
+  @assert (p1==p1_) && (p2==p2_)
+  s = zeros(ComplexF64,p1*p2,q1,q2)
+  for j2=1:q2,j1=1:q1
+   @inbounds s[:,j1,j2] .= eigvals(reshape(â[:,:,:,:,j1,j2],p1*p2,p1*p2),
+                                   reshape(b̂[:,:,:,:,j1,j2],p1*p2,p1*p2))
   end
   return s
  end
