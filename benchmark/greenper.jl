@@ -158,7 +158,7 @@ function dispersion1d(n=30,p=2)
  Q = 200; KS = 2π.*(0:Q-1)./Q # use finer grid
  ωp(k) = sqrt.(MM + sqrt( MM^2 - 4sin(k/2)^2/M1/M2))
  ωm(k) = sqrt.(MM - sqrt( MM^2 - 4sin(k/2)^2/M1/M2))
- figure(1,figsize=(2,1.5))
+ figure(1,figsize=(4,3).*(3/4))
  plot(KS,ωp.(KS),"C1") # optical
  plot(KS,ωm.(KS),"C1") # acoustic
 
@@ -167,7 +167,8 @@ function dispersion1d(n=30,p=2)
   plot(ks[j]*ones(p),sqrt.(max.(real.(λ[:,j]),0)),"C0.")
  end
 
- xticks([0,π,2π],[0,L"$\pi$",L"$2\pi$"])
+ xticks([0,π,2π],[L"$0$",L"$\pi$",L"$2\pi$"])
+ xlabel(L"$k$")
 
  savefig("dispersion.pgf",bbox_inches="tight")
 
