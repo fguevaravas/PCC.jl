@@ -105,8 +105,12 @@ function speedups(z,alg1,alg2)
  return times(z1)./times(z2)
 end
 
-# to put any savefig options
-mysavefig(x) = savefig("$x.pgf", bbox_inches="tight")
+# to put any savefig options (here generating PGF and PDF)
+function mysavefig(x) 
+ savefig("$x.pgf", bbox_inches="tight")
+ savefig("$x.pdf", bbox_inches="tight")
+end
+
 figsize = (4,3) .* 0.5
 
 function plot_pcc1d_pfixed(res)
@@ -117,7 +121,7 @@ function plot_pcc1d_pfixed(res)
   end
   grid(true)
   #legend()
-  xlabel("n")
+  xlabel(L"|n|")
   ylabel(L"time ($\mu$s)")
   mysavefig("pfixed_time_1d")
 
@@ -128,8 +132,8 @@ function plot_pcc1d_pfixed(res)
   end
   grid(true)
   #legend()
-  xlabel("n")
-  ylabel("memory (bytes)")
+  xlabel(L"|n|")
+  ylabel(L"memory (bytes)")
   mysavefig("pfixed_mem_1d")
 end
 
@@ -141,7 +145,7 @@ function plot_pcc1d_nfixed(res)
   end
   grid(true)
   #legend()
-  xlabel("p")
+  xlabel(L"|p|")
   ylabel("time (ms)")
   mysavefig("nfixed_time_1d")
 
@@ -152,55 +156,73 @@ function plot_pcc1d_nfixed(res)
   end
   grid(true)
   #legend()
-  xlabel("p")
-  ylabel("memory (bytes)")
+  xlabel(L"|p|")
+  ylabel(L"memory (bytes)")
   mysavefig("nfixed_mem_1d")
 end
 
+function theoretical_speedup(n,p)
+ conv = p*n + (p+1)*n*log2(n);
+ impr = p*n + 2*n*log2(n/p);
+ return conv/impr
+end
 
-function plot_pcc_speedups(res1p,res1n,res2p,res2n)
+function plot_pcc_speedups(res1p,res1n,res2p,res2n,theory=true)
+  cm = get_cmap("tab10")
   figure(1,figsize=figsize); clf()
   z = res1p[res1p.algo .== "cc",:]
-  semilogx(z[:,:p].*z[:,:q],speedups(res1p,"cc","improved"),label="1D")
+  semilogx(z[:,:p].*z[:,:q],speedups(res1p,"cc","improved"),label="1D",color=cm(0))
+  theory && semilogx(z[:,:p].*z[:,:q],theoretical_speedup.(z[:,:p].*z[:,:q],z[:,:p]),
+     label="1D (theory)",color=cm(0),linestyle="--")
+  
   z = res2p[res2p.algo .== "cc",:]
-  semilogx(ns(z),speedups(res2p,"cc","improved"),label="2D")
-  xlabel("n"); ylim(bottom=0)
+  semilogx(ns(z).^2,speedups(res2p,"cc","improved"),label="2D",color=cm(1))
+  theory && semilogx(ns(z).^2,theoretical_speedup.(ns(z).^2,2^6),
+     label="2D (theory)",color=cm(1),linestyle="--")
+
+  xlabel(L"|n|"); ylim(bottom=0)
   grid(true)
-  legend()
+  #legend()
   mysavefig("pfixed_speedup")
 
   figure(2,figsize=figsize); clf()
   z = res1n[res1n.algo .== "cc",:]
-  semilogx(z[:,:p],speedups(res1n,"cc","improved"),label="1D")
+  semilogx(z[:,:p],speedups(res1n,"cc","improved"),label="1D",color=cm(0))
+  theory && semilogx(z[:,:p],theoretical_speedup.(z[:,:p].*z[:,:q],z[:,:p]),
+     label="1D (theory)",color=cm(0),linestyle="--")
+
   z = res2n[res2n.algo .== "cc",:]
-  semilogx(periods(z),speedups(res2n,"cc","improved"),label="2D")
-  xlabel("p"); ylim(bottom=0)
+  semilogx(periods(z).^2,speedups(res2n,"cc","improved"),label="2D",color=cm(1))
+  theory && semilogx(periods(z).^2,theoretical_speedup.(ns(z).^2,periods(z).^2),
+     label="2D (theory)",color=cm(1),linestyle="--")
+  xlabel(L"|p|"); ylim(bottom=0)
   grid(true)
-  legend()
+  #legend()
   mysavefig("nfixed_speedup")
 
 end
+
 function plot_pcc2d_pfixed(res)
   figure(1,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog(ns(z), times(z)/1e6, label=algo_legend[algo])
+    loglog(ns(z).^2, times(z)/1e6, label=algo_legend[algo])
   end
   grid(true)
   #legend()
-  xlabel("n")
+  xlabel(L"|n|")
   ylabel("time (ms)")
   mysavefig("pfixed_time_2d")
 
   figure(2,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog(ns(z), memory(z), label=algo_legend[algo])
+    loglog(ns(z).^2, memory(z), label=algo_legend[algo])
   end
   grid(true)
   #legend()
-  xlabel("n")
-  ylabel("memory (bytes)")
+  xlabel(L"|n|")
+  ylabel(L"memory (bytes)")
   mysavefig("pfixed_mem_2d")
 end
 
@@ -208,22 +230,22 @@ function plot_pcc2d_nfixed(res)
   figure(1,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog(periods(z), times(z)/1e6, label=algo_legend[algo])
+    loglog(periods(z).^2, times(z)/1e6, label=algo_legend[algo])
   end
   grid(true)
   #legend()
-  xlabel("p")
+  xlabel(L"|p|")
   ylabel("time (ms)")
   mysavefig("nfixed_time_2d")
 
   figure(2,figsize=figsize); clf()
   for algo ∈ algos 
     z = res[res.algo .== algo,:]
-    loglog(periods(z),memory(z), label=algo_legend[algo])
+    loglog(periods(z).^2,memory(z), label=algo_legend[algo])
   end
   grid(true)
   #legend()
-  xlabel("p")
+  xlabel(L"|p|")
   ylabel("memory (bytes)")
   mysavefig("nfixed_mem_2d")
 end
