@@ -31,11 +31,11 @@ s1 = [
 
 s2 = [
 0 0 0 0 0 0 0 0 0;
-0 0 0 0 0 0 0 0 0;
 0 0 0 0 0 1 0 0 0;
 0 0 0 0 0 0 0 0 0;
-0 0 0 1 0 0 0 1 0;
 0 0 0 0 0 0 0 0 0;
+0 0 0 0 0 0 0 0 0;
+0 1 0 0 0 0 0 0 1;
 0 0 0 0 0 0 0 0 0;
 0 0 0 0 0 0 0 0 0;
 0 0 0 0 0 0 0 0 0;
@@ -82,17 +82,17 @@ for (ix,x) ∈ enumerate(signals)
  # the transformed signal
  y = ys[ix]
  figure(1,figsize=(2,2),dpi=360); clf()
- imshow(x,cmap="gray")
+ imshow(x,cmap="gray_r")
  xticks((0:p:n).-0.5,[]); yticks((0:p:n).-0.5,[])
  xticks((0:n).-0.5,[],minor=true); yticks((0:n).-0.5,[],minor=true)
  tick_params(axis="both", which="both", length=0)
  box(false); 
- grid(true,which="major",color="red") 
- grid(true,which="minor",color="gray") 
+ grid(true,which="major",color="black") 
+ grid(true,which="minor",color="black",linestyle=":") 
  mysavefig("x2d_$ix")
 
  figure(2,figsize=(2,2),dpi=360); clf()
- imshow(y,cmap="gray");
+ imshow(y,cmap="gray_r");
  # use same color scale for kernels
  # and a different one for the other signals
  clim(0,ix <= p^2 ? s1 : s2)
@@ -100,7 +100,7 @@ for (ix,x) ∈ enumerate(signals)
  xticks((0:n).-0.5,[],minor=true); yticks((0:n).-0.5,[],minor=true)
  tick_params(axis="both", which="both", length=0)
  box(false);
- grid(true,which="major",color="red") 
- grid(true,which="minor",color="gray") 
+ grid(true,which="major",color="black") 
+ grid(true,which="minor",color="black",linestyle=":")
  mysavefig("y2d_$ix")
 end
