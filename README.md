@@ -61,7 +61,7 @@ Unless noted otherwise, the code is released under the following license (see al
 ```
 BSD 3-Clause License
 
-Copyright (c) 2022, Trent DeGiovanni and Fernando Guevara Vasquez
+Copyright (c) 2026, Fernando González del Cueto and Fernando Guevara Vasquez
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
