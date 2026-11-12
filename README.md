@@ -1,7 +1,9 @@
-# Periodic Circular Convolution
-A collection of functions to calculate the periodic circular convolution
+# Fast circular convolution with periodic kernels
 
-Authors: Fernando González del Cueto and Fernando Guevara Vasquez
+This code reproduces the figures in __Fast circular convolution with periodic kernels__ by
+Fernando González del Cueto and Fernando Guevara Vasquez.
+
+For the associated preprint see: TBA.
 
 ## Tests
 To run tests, in Julia and from the directory `PCC.jl`
